@@ -2169,4 +2169,444 @@ private fun ProfilePinOverlay(
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
                 if (native.action != AndroidKeyEvent.ACTION_DOWN) {
-               …96499 tokens truncated…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
+                    return@onPreviewKeyEvent false
+                }
+                when (native.keyCode) {
+                    AndroidKeyEvent.KEYCODE_BACK,
+                    AndroidKeyEvent.KEYCODE_ESCAPE -> {
+                        if (isInputFocused) {
+                            focusManager.clearFocus(force = true)
+                        } else {
+                            onDismiss()
+                        }
+                        true
+                    }
+
+                    AndroidKeyEvent.KEYCODE_DEL,
+                    AndroidKeyEvent.KEYCODE_CLEAR -> {
+                        if (!isWorking && pin.isNotEmpty()) {
+                            pin = pin.dropLast(1)
+                            if (!errorMessage.isNullOrEmpty()) onClearError()
+                            if (!isSingleEntryMode) internalErrorMessage = null
+                        }
+                        true
+                    }
+
+                    else -> {
+                        val digit = keyCodeToDigit(native.keyCode)
+                        if (digit != null && !isWorking && pin.length < ProfilePinLength) {
+                            pin += digit
+                            if (!errorMessage.isNullOrEmpty()) onClearError()
+                            if (!isSingleEntryMode) internalErrorMessage = null
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        val headingText = when {
+            state is ProfilePinOverlayState.Unlock -> stringResource(R.string.profile_pin_overlay_unlock_heading, state.profile.name)
+            state is ProfilePinOverlayState.VerifyCurrentForChange -> stringResource(R.string.profile_pin_overlay_change_verify_heading, state.profile.name)
+            state is ProfilePinOverlayState.VerifyCurrentForRemove -> stringResource(R.string.profile_pin_overlay_remove_verify_heading, state.profile.name)
+            state is ProfilePinOverlayState.VerifyCurrentForDelete -> stringResource(R.string.profile_pin_overlay_delete_verify_heading, state.profile.name)
+            entryStage == ProfilePinEntryStage.Confirm -> stringResource(R.string.profile_pin_overlay_confirm_heading)
+            else -> stringResource(R.string.profile_pin_overlay_set_heading, state.profile.name)
+        }
+        val supportText = when {
+            !resolvedErrorMessage.isNullOrEmpty() -> resolvedErrorMessage
+            isWorking && isSingleEntryMode -> stringResource(R.string.profile_pin_verifying)
+            isWorking -> stringResource(R.string.action_saving)
+            state is ProfilePinOverlayState.Unlock -> stringResource(R.string.profile_pin_overlay_unlock_support)
+            state is ProfilePinOverlayState.VerifyCurrentForChange -> stringResource(R.string.profile_pin_overlay_change_verify_support)
+            state is ProfilePinOverlayState.VerifyCurrentForRemove -> stringResource(R.string.profile_pin_overlay_remove_verify_support)
+            state is ProfilePinOverlayState.VerifyCurrentForDelete -> stringResource(R.string.profile_pin_overlay_delete_verify_support)
+            entryStage == ProfilePinEntryStage.Confirm -> stringResource(R.string.profile_pin_overlay_confirm_support)
+            else -> stringResource(R.string.profile_pin_overlay_set_support)
+        }
+        val supportTextColor = if (isErrorState) {
+            Color(0xFFFF8E8E)
+        } else {
+            NuvioTheme.colors.TextSecondary
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = ProfileSelectionSpacing.ScreenPaddingHorizontal),
+            verticalArrangement = if (shouldUseCompactLayout) Arrangement.Top else Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(topPadding))
+
+            Spacer(modifier = Modifier.height(headingGap))
+
+            Text(
+                text = headingText,
+                color = NuvioTheme.colors.TextPrimary,
+                fontSize = headerFontSize.sp,
+                lineHeight = headerLineHeight.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(boxesGap))
+
+            ProfilePinBoxes(
+                value = pin,
+                isWorking = isWorking,
+                isErrorState = isErrorState,
+                isInputFocused = isInputFocused,
+                cursorAlpha = cursorAlpha,
+                compactMode = shouldUseCompactLayout,
+                modifier = Modifier.graphicsLayer {
+                    translationX = shakeOffset.value
+                }
+            )
+
+            Spacer(modifier = Modifier.height(supportGap))
+
+            Text(
+                text = supportText,
+                modifier = Modifier.widthIn(max = ProfileSelectionSpacing.PinSupportMaxWidth),
+                color = supportTextColor,
+                fontSize = supportFontSize.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                lineHeight = 24.sp
+            )
+
+            if (state is ProfilePinOverlayState.Unlock ||
+                state is ProfilePinOverlayState.VerifyCurrentForChange ||
+                state is ProfilePinOverlayState.VerifyCurrentForRemove ||
+                state is ProfilePinOverlayState.VerifyCurrentForDelete
+            ) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = stringResource(R.string.profile_pin_overlay_forgot_hint),
+                    modifier = Modifier.widthIn(max = ProfileSelectionSpacing.PinSupportMaxWidth),
+                    color = NuvioTheme.colors.TextTertiary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(backHintGap))
+
+            Text(
+                text = stringResource(R.string.profile_pin_overlay_back_hint),
+                color = NuvioTheme.colors.TextTertiary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+
+            Spacer(modifier = Modifier.height(contentBottomPadding))
+        }
+
+        BasicTextField(
+            value = pin,
+            onValueChange = { value ->
+                if (!isWorking) {
+                    pin = value.filter(Char::isDigit).take(ProfilePinLength)
+                    if (!errorMessage.isNullOrEmpty()) onClearError()
+                    if (!isSingleEntryMode) internalErrorMessage = null
+                }
+            },
+            modifier = Modifier
+                .size(NuvioTheme.spacing.hairline)
+                .graphicsLayer { alpha = 0f }
+                .focusRequester(focusRequester)
+                .onFocusChanged { state ->
+                    isInputFocused = state.isFocused
+                },
+            singleLine = true,
+            textStyle = TextStyle(color = Color.Transparent),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.NumberPassword,
+                imeAction = ImeAction.Done
+            ),
+            cursorBrush = SolidColor(Color.Transparent)
+        )
+    }
+}
+
+@Composable
+private fun ProfilePinBoxes(
+    value: String,
+    isWorking: Boolean,
+    isErrorState: Boolean,
+    isInputFocused: Boolean,
+    cursorAlpha: Float,
+    compactMode: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val boxSize by animateDpAsState(
+        targetValue = if (compactMode) 90.dp else ProfileSelectionSpacing.PinBoxSize,
+        animationSpec = tween(NuvioMotion.tokens.durations.fast),
+        label = "pinBoxSize"
+    )
+    val boxGap by animateDpAsState(
+        targetValue = if (compactMode) 10.dp else ProfileSelectionSpacing.PinBoxGap,
+        animationSpec = tween(NuvioMotion.tokens.durations.fast),
+        label = "pinBoxGap"
+    )
+    val activeCursorHeight by animateDpAsState(
+        targetValue = if (compactMode) 28.dp else 40.dp,
+        animationSpec = tween(NuvioMotion.tokens.durations.fast),
+        label = "pinCursorHeight"
+    )
+    val dotSize by animateDpAsState(
+        targetValue = if (compactMode) NuvioTheme.spacing.md else NuvioTheme.spacing.lg,
+        animationSpec = tween(NuvioMotion.tokens.durations.fast),
+        label = "pinDotSize"
+    )
+
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(boxGap),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(ProfilePinLength) { index ->
+            val isFilled = index < value.length
+            val isActive = index == value.length.coerceAtMost(ProfilePinLength - 1) &&
+                value.length < ProfilePinLength &&
+                isInputFocused &&
+                !isWorking
+            val borderColor by animateColorAsState(
+                targetValue = when {
+                    isErrorState -> Color(0xFFE35D5D)
+                    isFilled -> Color.White.copy(alpha = 0.92f)
+                    isActive -> Color.White
+                    else -> Color.White.copy(alpha = 0.72f)
+                },
+                animationSpec = tween(140),
+                label = "pinBoxBorder"
+            )
+            val backgroundColor by animateColorAsState(
+                targetValue = when {
+                    isErrorState -> Color(0xFF311818).copy(alpha = 0.76f)
+                    isFilled -> Color.White.copy(alpha = 0.07f)
+                    isActive -> Color.White.copy(alpha = 0.04f)
+                    else -> Color.Transparent
+                },
+                animationSpec = tween(140),
+                label = "pinBoxBackground"
+            )
+            val borderWidth by animateDpAsState(
+                targetValue = if (isActive || isErrorState) NuvioTheme.spacing.xxs else NuvioTheme.spacing.hairline,
+                animationSpec = tween(140),
+                label = "pinBoxBorderWidth"
+            )
+
+            Box(
+                modifier = Modifier
+                    .size(boxSize)
+                    .clip(RoundedCornerShape(NuvioTheme.radii.xxs))
+                    .background(backgroundColor)
+                    .border(
+                        border = if (isActive && !isErrorState) {
+                            NuvioTheme.focusRing.border(borderWidth)
+                        } else {
+                            BorderStroke(borderWidth, borderColor)
+                        },
+                        shape = RoundedCornerShape(NuvioTheme.radii.xxs)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                when {
+                    isFilled -> {
+                        Box(
+                            modifier = Modifier
+                                .size(dotSize)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                        )
+                    }
+
+                    isActive -> {
+                        Box(
+                            modifier = Modifier
+                                .width(NuvioTheme.spacing.xxs)
+                                .height(activeCursorHeight)
+                                .background(Color.White.copy(alpha = cursorAlpha))
+                        )
+                    }
+                }
+            }
+        }
+    }
+    }
+}
+
+@Composable
+private fun EditorSectionDivider() {
+    Box(
+        modifier = Modifier
+            .padding(top = ProfileSelectionSpacing.EditorPreviewTopOffset)
+            .width(NuvioTheme.spacing.hairline)
+            .height(ProfileSelectionSpacing.EditorDividerHeight)
+            .background(NuvioTheme.colors.Border.copy(alpha = 0.9f))
+    )
+}
+
+@Composable
+private fun ProfileNameField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    focusRequester: FocusRequester,
+    modifier: Modifier = Modifier
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isFocused) NuvioTheme.colors.FocusBackground else Color.White.copy(alpha = 0.05f),
+        animationSpec = tween(120),
+        label = "profileNameBackground"
+    )
+    val borderWidth by animateDpAsState(
+        targetValue = if (isFocused) NuvioTheme.spacing.xxs else NuvioTheme.spacing.hairline,
+        animationSpec = tween(120),
+        label = "profileNameBorderWidth"
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(ProfileSelectionSpacing.EditorFieldRadius))
+            .background(backgroundColor)
+            .border(
+                border = if (isFocused) {
+                    NuvioTheme.focusRing.border(borderWidth)
+                } else {
+                    BorderStroke(borderWidth, NuvioTheme.colors.Border)
+                },
+                shape = RoundedCornerShape(ProfileSelectionSpacing.EditorFieldRadius)
+            )
+            .padding(horizontal = NuvioTheme.spacing.lg, vertical = 14.dp)
+    ) {
+        if (value.isEmpty()) {
+            Text(
+                text = stringResource(R.string.profile_name_placeholder),
+                color = NuvioTheme.colors.TextTertiary,
+                fontSize = 16.sp
+            )
+        }
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester)
+                .onFocusChanged { isFocused = it.isFocused },
+            textStyle = TextStyle(
+                color = Color.White,
+                fontSize = 16.sp,
+                textDirection = TextDirection.Content
+            ),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    focusManager.moveFocus(FocusDirection.Down)
+                }
+            ),
+            cursorBrush = NuvioTheme.focusRing.brush()
+        )
+    }
+}
+
+@Composable
+private fun OverlayButton(
+    text: String,
+    isPrimary: Boolean,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+
+    val bgColor by animateColorAsState(
+        targetValue = when {
+            !enabled -> Color.White.copy(alpha = 0.04f)
+            isPrimary && isFocused -> NuvioTheme.colors.SecondaryVariant
+            isPrimary -> NuvioTheme.colors.Secondary
+            isFocused -> NuvioTheme.colors.FocusBackground
+            else -> Color.White.copy(alpha = 0.06f)
+        },
+        animationSpec = tween(120),
+        label = "btnBg"
+    )
+    val borderColor by animateColorAsState(
+        targetValue = when {
+            !enabled -> NuvioTheme.colors.Border
+            isFocused -> NuvioTheme.colors.FocusRing
+            isPrimary -> NuvioTheme.colors.Secondary
+            else -> NuvioTheme.colors.Border
+        },
+        animationSpec = tween(120),
+        label = "btnBorder"
+    )
+    val borderWidth by animateDpAsState(
+        targetValue = if (isFocused) NuvioTheme.spacing.xxs else NuvioTheme.spacing.hairline,
+        animationSpec = tween(120),
+        label = "btnBorderWidth"
+    )
+    val textColor = when {
+        !enabled -> NuvioTheme.colors.TextSecondary
+        isPrimary && isFocused -> NuvioTheme.colors.OnSecondaryVariant
+        isFocused -> NuvioTheme.colors.FocusContent
+        isPrimary -> NuvioTheme.colors.OnSecondary
+        else -> NuvioTheme.colors.TextPrimary
+    }
+
+    Box(
+        modifier = modifier
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(NuvioTheme.radii.md))
+            .background(bgColor)
+            .border(
+                border = if (isFocused && enabled) {
+                    NuvioTheme.focusRing.border(borderWidth)
+                } else {
+                    BorderStroke(borderWidth, borderColor)
+                },
+                shape = RoundedCornerShape(NuvioTheme.radii.md)
+            )
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusable(enabled = enabled, interactionSource = interactionSource)
+            .onPreviewKeyEvent { event ->
+                val native = event.nativeKeyEvent
+                if (enabled && native.action == AndroidKeyEvent.ACTION_UP && isProfileSelectKey(native.keyCode)) {
+                    onClick()
+                    true
+                } else {
+                    false
+                }
+            }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = enabled,
+                onClick = onClick
+            )
+            .semantics { role = Role.Button }
+            .padding(horizontal = 28.dp, vertical = NuvioTheme.spacing.md),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            color = textColor,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
+    }
+}
