@@ -145,7 +145,14 @@ jobs:
         run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' :app:assembleFullRelease --stacktrace -PlivetvTestBuild=true -PlivetvBuildNumber=1
 
       - name: Name epiSLATE test APK
-        run: cp app/build/outputs/apk/full/release/app-full-universal-release.apk epiSLATE-test.apk
+        run: |
+          shopt -s nullglob
+          apks=(app/build/outputs/apk/full/release/*universal*.apk)
+          if [ "${#apks[@]}" -eq 0 ]; then
+            apks=(app/build/outputs/apk/full/release/*.apk)
+          fi
+          test "${#apks[@]}" -eq 1
+          cp "${apks[0]}" epiSLATE-test.apk
 
       - name: Upload epiSLATE Test APK
         uses: actions/upload-artifact@v7
