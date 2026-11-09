@@ -929,13 +929,6 @@ private fun ProfileSelectionMainContent(
             Spacer(modifier = Modifier.height(ProfileSelectionSpacing.HeadingToSubheading))
         }
 
-        Text(
-            text = screenSubtitle,
-            color = NuvioTheme.colors.TextSecondary,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Medium
-        )
-
         Spacer(modifier = Modifier.weight(1f, fill = true))
 
         ProfileGrid(
@@ -952,7 +945,26 @@ private fun ProfileSelectionMainContent(
             onAddProfileClick = onAddProfileClick
         )
 
+        if (!isManagementMode) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = screenSubtitle,
+                color = NuvioTheme.colors.TextSecondary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+
         Spacer(modifier = Modifier.weight(1f, fill = true))
+
+        if (isManagementMode) {
+            Text(
+                text = screenSubtitle,
+                color = NuvioTheme.colors.TextSecondary,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
 
         if (screenHint != null) {
             Text(

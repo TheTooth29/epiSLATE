@@ -215,6 +215,7 @@ private fun ModernContinueWatchingRowItem(
         cardStyle = continueWatchingCardStyle,
         cornerRadius = continueWatchingCornerRadius,
         homepageTileBorder = LocalHomepageTileStyling.current,
+        focusGlowEnabled = !LocalFastScrollActive.current.value,
         isFocused = isCardFocused,
         modifier = modifier
             .focusRequester(requester)
@@ -822,7 +823,7 @@ internal fun ModernRowSection(
 
         val layoutDirection = LocalLayoutDirection.current
         val isRtl = layoutDirection == LayoutDirection.Rtl
-        val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec, rowStartPadding, isRtl) {
+        val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec, rowStartPadding, isRtl, rowListState) {
             val parentStartOffsetPx = with(density) { rowStartPadding.roundToPx() }
             @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
             object : BringIntoViewSpec {
@@ -835,6 +836,21 @@ internal fun ModernRowSection(
                     containerSize: Float
                 ): Float {
                     val childSize = abs(size)
+                    val layout = rowListState.layoutInfo
+                    val firstOfLastFour = layout.visibleItemsInfo.firstOrNull {
+                        it.index == layout.totalItemsCount - 4
+                    }
+                    val lastItem = layout.visibleItemsInfo.lastOrNull()
+                    // Once the final four cards fit, hold their alignment while focus moves within them.
+                    if (firstOfLastFour != null && lastItem != null && lastItem.index == layout.totalItemsCount - 1) {
+                        val groupStart = firstOfLastFour.offset - layout.viewportStartOffset
+                        val groupEnd = lastItem.offset + lastItem.size - layout.viewportStartOffset
+                        val childStart = if (isRtl) containerSize - offset - childSize else offset
+                        val scrollToRowInset = groupStart - parentStartOffsetPx
+                        if (childStart + 1f >= groupStart && groupEnd - scrollToRowInset <= containerSize) {
+                            return if (isRtl) -scrollToRowInset.toFloat() else scrollToRowInset.toFloat()
+                        }
+                    }
                     if (isRtl) {
                         val childSmallerThanParent = childSize <= containerSize
                         val initialTarget = containerSize - parentStartOffsetPx.toFloat()
@@ -971,22 +987,32 @@ internal fun ModernRowSection(
                         }
                     }
 
+                    val clippedTileFade = Modifier.graphicsLayer {
+                        val layout = rowListState.layoutInfo
+                        val bounds = layout.visibleItemsInfo.firstOrNull { it.index == index }
+                        val clipped = bounds != null && (bounds.offset < layout.viewportStartOffset ||
+                            bounds.offset + bounds.size > layout.viewportEndOffset)
+                        alpha = if (clipped && !isTargetItem) 0.25f else 1f
+                    }
+
                     when (val payload = item.payload) {
                         is ModernPayload.ContinueWatching -> {
-                            ModernContinueWatchingRowItem(
-                                payload = payload,
-                                requester = requester,
-                                isTargetItem = isTargetItem,
-                                cardWidth = continueWatchingCardWidth,
-                                imageHeight = continueWatchingCardHeight,
-                                blurUnwatchedEpisodes = blurUnwatchedEpisodes,
-                                useEpisodeThumbnails = useEpisodeThumbnails,
-                                continueWatchingCardStyle = continueWatchingCardStyle,
-                                continueWatchingCornerRadius = continueWatchingCornerRadius,
-                                onFocused = onFocused,
-                                onContinueWatchingClick = onContinueWatchingClick,
-                                onShowOptions = onContinueWatchingOptions
-                            )
+                            Box(modifier = clippedTileFade) {
+                                ModernContinueWatchingRowItem(
+                                    payload = payload,
+                                    requester = requester,
+                                    isTargetItem = isTargetItem,
+                                    cardWidth = continueWatchingCardWidth,
+                                    imageHeight = continueWatchingCardHeight,
+                                    blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+                                    useEpisodeThumbnails = useEpisodeThumbnails,
+                                    continueWatchingCardStyle = continueWatchingCardStyle,
+                                    continueWatchingCornerRadius = continueWatchingCornerRadius,
+                                    onFocused = onFocused,
+                                    onContinueWatchingClick = onContinueWatchingClick,
+                                    onShowOptions = onContinueWatchingOptions
+                                )
+                            }
                         }
 
                         is ModernPayload.Catalog,
@@ -1023,8 +1049,8 @@ internal fun ModernRowSection(
                             }
                             val placeholderFocusBlock = isPlaceholder && index > 0
                             Box(modifier = if (placeholderFocusBlock) {
-                                Modifier.focusProperties { canFocus = false }
-                            } else Modifier) {
+                                clippedTileFade.focusProperties { canFocus = false }
+                            } else clippedTileFade) {
                             ModernCatalogRowItem(
                                 item = item,
                                 payload = payload,

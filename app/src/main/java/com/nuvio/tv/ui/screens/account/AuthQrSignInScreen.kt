@@ -64,7 +64,6 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.AuthState
-import com.nuvio.tv.ui.components.BrandWordmark
 import com.nuvio.tv.ui.components.SkeletonBar
 import com.nuvio.tv.ui.components.rememberShimmerBrush
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
@@ -268,8 +267,9 @@ private fun AuthQrBrandPanel(
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.Center
     ) {
-        BrandWordmark(
-            contentDescription = stringResource(R.string.cd_nuvio),
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.epislate_wordmark),
+            contentDescription = "epiSLATE",
             modifier = Modifier.height(60.dp),
             contentScale = ContentScale.Fit
         )
@@ -283,6 +283,13 @@ private fun AuthQrBrandPanel(
                 lineHeight = 45.sp,
                 fontWeight = FontWeight.SemiBold
             )
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = stringResource(R.string.flicksho_account_linking),
+            modifier = Modifier.widthIn(max = 440.dp),
+            style = MaterialTheme.typography.bodyLarge,
+            color = AuthTextPrimary
         )
         if (isSignedIn || useEmailLogin) {
             Spacer(modifier = Modifier.height(18.dp))

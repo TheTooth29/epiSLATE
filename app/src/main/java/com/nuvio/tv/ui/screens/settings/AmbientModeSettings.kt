@@ -31,7 +31,7 @@ internal fun AmbientModeSettingsCard(
         subtitle = stringResource(R.string.ambient_mode_subtitle)
     ) {
         SettingsToggleRow(
-            title = stringResource(R.string.ambient_mode_title),
+            title = stringResource(R.string.enable_screensaver),
             subtitle = stringResource(R.string.ambient_mode_enabled_subtitle),
             checked = settings.enabled,
             onToggle = { viewModel.setEnabled(!settings.enabled) }

@@ -449,7 +449,8 @@ fun ContinueWatchingCard(
     isFocused: Boolean = false,
     cornerRadius: Dp = NuvioTheme.radii.md,
     posterTitleOverride: TextStyle? = null,
-    homepageTileBorder: Boolean = false
+    homepageTileBorder: Boolean = false,
+    focusGlowEnabled: Boolean = true
 ) {
     val isPosterStyle = cardStyle == ContinueWatchingCardStyle.POSTER
     val isWideStyle = cardStyle == ContinueWatchingCardStyle.WIDE
@@ -624,6 +625,11 @@ fun ContinueWatchingCard(
     
     val bgCardColor = NuvioTheme.colors.BackgroundCard
     val backgroundPainter = remember(bgCardColor) { androidx.compose.ui.graphics.painter.ColorPainter(bgCardColor) }
+    val focusGlow = rememberArtworkBackedFocusGlow(
+        imageUrl = effectiveImageModel,
+        fallbackSeed = titleText,
+        enabled = focusGlowEnabled
+    )
 
     LightweightCard(
         onClick = {
@@ -666,6 +672,7 @@ fun ContinueWatchingCard(
             },
         shape = cwCardShape,
         containerColor = Color.Transparent,
+        focusedGlow = focusGlow,
         unfocusedBorder = if (homepageTileBorder && !textBelowArtwork) Border(
             border = BorderStroke(1.dp, Color(0xFF344859)), shape = cwCardShape
         ) else Border.None,

@@ -706,14 +706,36 @@ fun ModernHomeContent(
     } else Modifier.background(NuvioTheme.colors.Background)
     Box(modifier = Modifier.fillMaxSize().then(homepageBackground)) {
         if (rowsOnlyHomepage) {
-            androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(com.nuvio.tv.R.drawable.epislate_wordmark),
-                contentDescription = "epiSLATE",
+            val clockFormatter = remember {
+                java.text.SimpleDateFormat("h:mm a", java.util.Locale.US)
+            }
+            val clock = remember { mutableStateOf(clockFormatter.format(java.util.Date())) }
+            LaunchedEffect(Unit) {
+                while (true) {
+                    val now = System.currentTimeMillis()
+                    clockFormatter.timeZone = java.util.TimeZone.getDefault()
+                    clock.value = clockFormatter.format(java.util.Date(now))
+                    delay(60_000L - now % 60_000L)
+                }
+            }
+            androidx.compose.foundation.layout.Row(
                 modifier = Modifier.align(Alignment.TopEnd)
                     .padding(top = 10.dp, end = 32.dp)
-                    .size(width = 88.dp, height = 64.dp)
-                    .zIndex(2f)
-            )
+                    .zIndex(2f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(com.nuvio.tv.R.drawable.epislate_wordmark),
+                    contentDescription = "epiSLATE",
+                    modifier = Modifier.size(width = 88.dp, height = 64.dp)
+                )
+                Text(
+                    text = clock.value,
+                    modifier = Modifier.padding(start = 12.dp),
+                    color = NuvioTheme.colors.TextPrimary,
+                    fontSize = 16.sp
+                )
+            }
         }
             val posterCardCornerRadius = remember(uiState.posterCardCornerRadiusDp) { uiState.posterCardCornerRadiusDp.dp }
             val rowHorizontalPadding = 52.dp
