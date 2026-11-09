@@ -3404,4 +3404,8 @@
     <string name="stream_resume_from_percent">Resume from %1$d%%</string>
     <string name="enable_screensaver">Enable Screensaver</string>
     <string name="flicksho_account_linking">Account linking powered by Nuvio</string>
+    <string name="catalog_order_bulk_hide">Select catalogs to hide</string>
+    <string name="catalog_order_bulk_hide_apply">Hide selected (%1$d)</string>
+    <string name="catalog_order_bulk_select">Select</string>
+    <string name="catalog_order_bulk_selected">Selected</string>
 </resources>

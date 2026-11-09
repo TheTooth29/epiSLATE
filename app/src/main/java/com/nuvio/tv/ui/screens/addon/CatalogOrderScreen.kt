@@ -29,6 +29,9 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,7 +64,11 @@ fun CatalogOrderScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
-    BackHandler { onBackPress() }
+    var selection by remember { mutableStateOf<Set<String>?>(null) }
+
+    BackHandler {
+        if (selection == null) onBackPress() else selection = null
+    }
 
     Box(
         modifier = Modifier
@@ -86,6 +93,31 @@ fun CatalogOrderScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioTheme.colors.TextSecondary
                 )
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
+                val selectedKeys = selection
+                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
+                    if (selectedKeys == null) {
+                        Button(
+                            onClick = { selection = emptySet() },
+                            enabled = uiState.items.any { it.canSelectForBulkHide }
+                        ) {
+                            Text(stringResource(R.string.catalog_order_bulk_hide))
+                        }
+                    } else {
+                        Button(
+                            onClick = {
+                                viewModel.hideCatalogsOnHome(selectedKeys)
+                                selection = null
+                            },
+                            enabled = selectedKeys.isNotEmpty()
+                        ) {
+                            Text(stringResource(R.string.catalog_order_bulk_hide_apply, selectedKeys.size))
+                        }
+                        Button(onClick = { selection = null }) {
+                            Text(stringResource(android.R.string.cancel))
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
                 val followAddonsLabel = stringResource(R.string.catalog_order_follow_addons)
                 Row(
@@ -162,6 +194,13 @@ fun CatalogOrderScreen(
                                     )
                                 }
                             },
+                            bulkSelected = selection?.let { item.disableKey in it },
+                            onToggleSelection = {
+                                selection = selection?.let { keys ->
+                                    if (item.disableKey in keys) keys - item.disableKey
+                                    else keys + item.disableKey
+                                }
+                            },
                             onToggleEnabled = { viewModel.toggleCatalogEnabled(item.disableKey) }
                         )
                     }
@@ -176,6 +215,8 @@ private fun CatalogOrderCard(
     item: CatalogOrderItem,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
+    bulkSelected: Boolean?,
+    onToggleSelection: () -> Unit,
     onToggleEnabled: () -> Unit
 ) {
     Card(
@@ -212,7 +253,15 @@ private fun CatalogOrderCard(
                 }
             }
 
-            Row(
+            if (bulkSelected != null && item.canSelectForBulkHide) {
+                Button(onClick = onToggleSelection) {
+                    Text(stringResource(
+                        if (bulkSelected) R.string.catalog_order_bulk_selected
+                        else R.string.catalog_order_bulk_select
+                    ))
+                }
+            }
+            if (bulkSelected == null) Row(
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
