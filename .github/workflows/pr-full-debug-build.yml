@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   full-debug-build:
-    name: Build fullDebug APK
+    name: Build signed epiSLATE Test APK
     runs-on: ubuntu-latest
 
     steps:
@@ -119,33 +119,35 @@ jobs:
           rm keys.properties
           echo "Keys set:"; cut -d= -f1 local.properties
 
-      - name: Prepare CI signing config
+      - name: Prepare epiSLATE test signing
+        env:
+          LIVETV_KEYSTORE_BASE64: ${{ secrets.LIVETV_KEYSTORE_BASE64 }}
         run: |
-          keytool -genkeypair \
-            -v \
-            -keystore "$RUNNER_TEMP/ci-debug.jks" \
-            -storepass android \
-            -alias androiddebugkey \
-            -keypass android \
-            -dname "CN=Android Debug,O=Android,C=US" \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000
-
+          if [ -n "$LIVETV_KEYSTORE_BASE64" ]; then
+            printf '%s' "$LIVETV_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/key.jks"
+          else
+            cp keystore/livetv-fork.jks "$RUNNER_TEMP/key.jks"
+          fi
           {
-            echo "NUVIO_RELEASE_STORE_FILE=$RUNNER_TEMP/ci-debug.jks"
-            echo "NUVIO_RELEASE_KEY_ALIAS=androiddebugkey"
-            echo "NUVIO_RELEASE_KEY_PASSWORD=android"
-            echo "NUVIO_RELEASE_STORE_PASSWORD=android"
+            echo "NUVIO_RELEASE_STORE_FILE=$RUNNER_TEMP/key.jks"
+            echo "NUVIO_RELEASE_KEY_ALIAS=livetv"
+            echo "NUVIO_RELEASE_KEY_PASSWORD=livetvfork"
+            echo "NUVIO_RELEASE_STORE_PASSWORD=livetvfork"
           } >> "$GITHUB_ENV"
 
-      - name: Test updater and build fullDebug APK
-        run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' :app:assembleFullDebug --stacktrace
+      - name: Set the test app label
+        run: |
+          for f in app/src/full/res/values*/livetv_app_name.xml; do
+            sed -i 's#>\([^<]*\)</string>#>\1 Test</string>#' "$f"
+          done
+
+      - name: Test updater and build signed epiSLATE Test APK
+        run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' :app:assembleFullRelease --stacktrace -PlivetvTestBuild=true -PlivetvBuildNumber=1
 
       - name: Name epiSLATE test APK
-        run: cp app/build/outputs/apk/full/debug/app-full-universal-debug.apk epiSLATE-test.apk
+        run: cp app/build/outputs/apk/full/release/app-full-universal-release.apk epiSLATE-test.apk
 
-      - name: Upload fullDebug APK
+      - name: Upload epiSLATE Test APK
         uses: actions/upload-artifact@v7
         with:
           path: epiSLATE-test.apk
