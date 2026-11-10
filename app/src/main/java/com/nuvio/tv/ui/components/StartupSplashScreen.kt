@@ -18,7 +18,8 @@ import com.nuvio.tv.ui.theme.epiSlateBackground
 @Composable
 internal fun EpiSlateProfileWordmark(modifier: Modifier = Modifier, lowerForPicker: Boolean = true) {
     BrandWordmark(
-        modifier = modifier.offset(y = (if (lowerForPicker) 8 else 0).dp).height(100.dp),
+        modifier = modifier.offset(y = (if (lowerForPicker) 16 else 0).dp)
+            .height((if (lowerForPicker) 120 else 100).dp),
         contentDescription = "epiSLATE",
         drawableOverride = R.drawable.epislate_wordmark
     )

@@ -956,17 +956,6 @@ private fun ProfileSelectionMainContent(
             }
         }
 
-        if (!isManagementMode) {
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = screenSubtitle,
-                modifier = Modifier.graphicsLayer { translationY = gridOffset },
-                color = NuvioTheme.colors.TextSecondary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
-        }
-
         Spacer(modifier = Modifier.weight(1f, fill = true))
 
         if (isManagementMode) {
@@ -1116,16 +1105,17 @@ private fun ProfileCard(
             createFocusRingStyle(ThemeColors.getColorPalette(it))
         }
     }
-    val itemScale = 1f + (0.04f * focusProgress)
+    val sizeProgress = if (isManagementMode) focusProgress else 0f
+    val itemScale = 1f + (0.04f * sizeProgress)
     val avatarSize = androidx.compose.ui.unit.lerp(
         if (compact) ProfileSelectionSpacing.CompactAvatarSize else 96.dp,
         if (compact) ProfileSelectionSpacing.CompactFocusedAvatarSize else 102.dp,
-        focusProgress
+        sizeProgress
     )
     val outerAvatarSize = androidx.compose.ui.unit.lerp(
         if (compact) ProfileSelectionSpacing.CompactOuterAvatarSize else 114.dp,
         if (compact) ProfileSelectionSpacing.CompactFocusedOuterAvatarSize else 122.dp,
-        focusProgress
+        sizeProgress
     )
     val ringWidth = androidx.compose.ui.unit.lerp(NuvioTheme.spacing.hairline, (if (isManagementMode) 3 else 2).dp, focusProgress)
     val nameColor = lerp(
@@ -1208,7 +1198,11 @@ private fun ProfileCard(
                         shape = CircleShape
                     )
                     .border(
-                        border = (profileFocusRing ?: NuvioTheme.focusRing).border(ringWidth, focusProgress),
+                        border = if (isManagementMode) {
+                            (profileFocusRing ?: NuvioTheme.focusRing).border(ringWidth, focusProgress)
+                        } else {
+                            BorderStroke(ringWidth, Color(0xFFFFC65C).copy(alpha = focusProgress))
+                        },
                         shape = CircleShape
                     ),
                 contentAlignment = Alignment.Center
