@@ -1,4 +1,4 @@
-name: Build Android TV Release
+name: Release · Android TV preview, draft or publish
 
 on:
   workflow_dispatch:

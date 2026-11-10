@@ -1,8 +1,8 @@
-name: PR Full Debug Build Comment
+name: PR · Post test build result
 
 on:
   workflow_run:
-    workflows: ["PR Full Debug Build"]
+    workflows: ["APK · epiSLATE Test"]
     types: [completed]
 
 permissions:

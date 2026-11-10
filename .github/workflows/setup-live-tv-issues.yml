@@ -1,4 +1,4 @@
-name: Setup Live TV Issue System
+name: Setup · Live TV issue system
 
 on:
   workflow_dispatch:

@@ -1,4 +1,4 @@
-name: Prepare IPTV fork update
+name: Upstream · Prepare IPTV fork update
 
 # Intentionally manual: updates are tested and reviewed before dev or releases change.
 on:

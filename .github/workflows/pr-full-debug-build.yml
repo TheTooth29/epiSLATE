@@ -1,4 +1,4 @@
-name: PR Full Debug Build
+name: APK · epiSLATE Test
 
 on:
   pull_request:

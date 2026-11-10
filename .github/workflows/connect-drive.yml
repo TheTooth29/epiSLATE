@@ -1,4 +1,4 @@
-name: Connect Google Drive (test builds)
+name: Setup · Connect Google Drive for test builds
 
 # Run this once from the Actions tab. It shows a code on the run's page; approve it on your
 # phone at google.com/device. The Drive access is then saved as the DRIVE_REFRESH_TOKEN secret,

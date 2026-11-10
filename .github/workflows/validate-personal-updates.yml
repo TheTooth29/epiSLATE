@@ -1,4 +1,4 @@
-name: Validate personal update setup
+name: Check · Fork update configuration
 
 on:
   pull_request:

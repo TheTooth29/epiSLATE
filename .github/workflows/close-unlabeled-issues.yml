@@ -1,4 +1,4 @@
-name: Close unlabeled issues
+name: Issues · Close unlabeled reports
 
 on:
   schedule:

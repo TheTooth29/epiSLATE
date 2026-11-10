@@ -1,4 +1,4 @@
-name: Close needs-info bug issues
+name: Issues · Close bugs needing info
 
 on:
   schedule:
