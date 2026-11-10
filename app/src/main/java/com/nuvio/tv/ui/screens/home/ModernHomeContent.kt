@@ -727,7 +727,7 @@ fun ModernHomeContent(
                 androidx.compose.foundation.Image(
                     painter = androidx.compose.ui.res.painterResource(com.nuvio.tv.R.drawable.epislate_wordmark),
                     contentDescription = "epiSLATE",
-                    modifier = Modifier.size(width = 88.dp, height = 64.dp)
+                    modifier = Modifier.size(width = 105.6.dp, height = 76.8.dp)
                 )
                 Text(
                     text = clock.value,
