@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -15,9 +16,9 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.theme.epiSlateBackground
 
 @Composable
-internal fun EpiSlateProfileWordmark(modifier: Modifier = Modifier) {
+internal fun EpiSlateProfileWordmark(modifier: Modifier = Modifier, lowerForPicker: Boolean = true) {
     BrandWordmark(
-        modifier = modifier.height(100.dp),
+        modifier = modifier.offset(y = (if (lowerForPicker) 8 else 0).dp).height(100.dp),
         contentDescription = "epiSLATE",
         drawableOverride = R.drawable.epislate_wordmark
     )

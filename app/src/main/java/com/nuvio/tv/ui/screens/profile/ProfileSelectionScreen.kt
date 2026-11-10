@@ -912,7 +912,7 @@ private fun ProfileSelectionMainContent(
             ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        EpiSlateProfileWordmark()
+        EpiSlateProfileWordmark(lowerForPicker = !isManagementMode)
 
         Spacer(modifier = Modifier.height(ProfileSelectionSpacing.LogoToHeading))
 
@@ -960,6 +960,7 @@ private fun ProfileSelectionMainContent(
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = screenSubtitle,
+                modifier = Modifier.graphicsLayer { translationY = gridOffset },
                 color = NuvioTheme.colors.TextSecondary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
@@ -1060,6 +1061,7 @@ private fun ProfileGrid(
                         focusRequester = focusRequesters[index],
                         compact = useCompactCards,
                         profileTheme = profileThemes[profile.id],
+                        isManagementMode = isManagementMode,
                         onFocused = { onProfileFocused(profile) },
                         onClick = { onProfileSelected(profile) },
                         onLongPress = if (isManagementMode) ({ onProfileLongPress(profile) }) else null
@@ -1095,6 +1097,7 @@ private fun ProfileCard(
     focusRequester: FocusRequester,
     compact: Boolean,
     profileTheme: com.nuvio.tv.domain.model.AppTheme? = null,
+    isManagementMode: Boolean,
     onFocused: () -> Unit,
     onClick: () -> Unit,
     onLongPress: (() -> Unit)?
@@ -1124,7 +1127,7 @@ private fun ProfileCard(
         if (compact) ProfileSelectionSpacing.CompactFocusedOuterAvatarSize else 122.dp,
         focusProgress
     )
-    val ringWidth = androidx.compose.ui.unit.lerp(NuvioTheme.spacing.hairline, 3.dp, focusProgress)
+    val ringWidth = androidx.compose.ui.unit.lerp(NuvioTheme.spacing.hairline, (if (isManagementMode) 3 else 2).dp, focusProgress)
     val nameColor = lerp(
         NuvioTheme.colors.TextSecondary,
         NuvioTheme.colors.TextPrimary,
