@@ -731,9 +731,9 @@ fun ModernHomeContent(
                 )
                 Text(
                     text = clock.value,
-                    modifier = Modifier.padding(start = 12.dp),
+                    modifier = Modifier.padding(start = 12.dp).offset(y = (-2).dp),
                     color = NuvioTheme.colors.TextPrimary,
-                    fontSize = 16.sp
+                    fontSize = 14.sp
                 )
             }
         }
