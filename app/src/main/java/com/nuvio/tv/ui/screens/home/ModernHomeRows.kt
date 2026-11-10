@@ -1217,6 +1217,14 @@ private fun ModernCarouselCard(
     }
     val genrePreviewUrl = if (isCollectionFolder) baseImageUrl?.let(::genreTilePreviewUrl) else null
     val imageUrl = genrePreviewUrl ?: baseImageUrl
+    val genreTileId = payload?.takeIf {
+        genrePreviewUrl != null || it.collectionTitle.contains("genre", ignoreCase = true)
+    }?.folderId
+    LaunchedEffect(genreTileId, imageUrl) {
+        if (genreTileId != null && imageUrl.isNullOrBlank()) {
+            android.util.Log.i("EpiSlateGenreArt", "tile=$genreTileId cover=missing")
+        }
+    }
     // GIF overlay: shown on top of the base image only when focused and loaded
     val focusGifUrl = when {
         payload == null -> null
@@ -1454,7 +1462,25 @@ private fun ModernCarouselCard(
                             error = backgroundPainter,
                             fallback = backgroundPainter,
                             contentScale = imageContentScale,
-                            onError = {
+                            onLoading = {
+                                if (genreTileId != null) {
+                                    val source = if (genrePreviewUrl != null) "preview" else "configured"
+                                    android.util.Log.i("EpiSlateGenreArt", "tile=$genreTileId loading=$source")
+                                }
+                            },
+                            onSuccess = { state ->
+                                if (genreTileId != null) {
+                                    val source = if (state.result.request.data != imageUrl) "fallback"
+                                        else if (genrePreviewUrl != null) "preview" else "configured"
+                                    android.util.Log.i("EpiSlateGenreArt", "tile=$genreTileId success=$source cache=${state.result.dataSource}")
+                                }
+                            },
+                            onError = { state ->
+                                if (genreTileId != null) {
+                                    val source = if (state.result.request.data != imageUrl) "fallback"
+                                        else if (genrePreviewUrl != null) "preview" else "configured"
+                                    android.util.Log.w("EpiSlateGenreArt", "tile=$genreTileId failed=$source error=${state.result.throwable.javaClass.simpleName}")
+                                }
                                 if (!item.metaPreview?.landscapePoster.isNullOrBlank() || !item.metaPreview?.rawPosterUrl.isNullOrBlank()) {
                                     customPosterLoadFailed = true
                                 }
