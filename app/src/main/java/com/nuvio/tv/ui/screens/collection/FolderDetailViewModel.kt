@@ -132,6 +132,8 @@ class FolderDetailViewModel @Inject constructor(
     private val traktPublicListSourceResolver: TraktPublicListSourceResolver,
     val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController
 ) : ViewModel() {
+    suspend fun usDigitalMovieDate(itemId: String): String? = tmdbService.usDigitalMovieDate(itemId)
+
 
     private val collectionId: String = savedStateHandle["collectionId"] ?: ""
     private val folderId: String = savedStateHandle["folderId"] ?: ""

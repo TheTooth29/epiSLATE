@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -175,6 +176,7 @@ fun FolderDetailScreen(
                     folder = folder,
                     tabFocusState = tabFocusStates[uiState.selectedTabIndex] ?: FolderDetailGridFocusState(),
                     onSelectTab = viewModel::selectTab,
+                    loadUsDigitalDate = viewModel::usDigitalMovieDate,
                     onNavigateToDetail = onNavigateToDetail,
                     isItemWatched = isItemWatched,
                     onLoadMore = { viewModel.loadMoreItems(uiState.selectedTabIndex) },
@@ -277,6 +279,7 @@ private fun TabbedGridContent(
     onSaveFocusState: (Int, Int, String?) -> Unit,
     onLoadMore: () -> Unit = {},
     isItemWatched: (MetaPreview) -> Boolean = { false },
+    loadUsDigitalDate: (suspend (String) -> String?)? = null,
     onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> }
 ) {
     val tabFocusRequesters = remember(uiState.tabs.size) { uiState.tabs.indices.map { FocusRequester() } }
@@ -496,8 +499,13 @@ private fun TabbedGridContent(
                 ) { index, item ->
                     val itemKey = "${item.id}_$index"
                     val focusReq = itemFocusRequesters.getOrPut(itemKey) { FocusRequester() }
+                    val useDigitalDate = folder.title.equals("Netflix", ignoreCase = true) && item.apiType == "movie"
+                    val digitalDate by produceState<String?>(null, item.id, useDigitalDate) {
+                        if (useDigitalDate) value = loadUsDigitalDate?.invoke(item.id)
+                    }
                     GridContentCard(
                         item = item,
+                        yearLabelOverride = digitalDate,
                         posterCardStyle = posterCardStyle,
                         focusRequester = focusReq,
                         isWatched = isItemWatched(item),

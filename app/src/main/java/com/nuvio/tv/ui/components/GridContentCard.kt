@@ -79,6 +79,7 @@ fun GridContentCard(
     showReleaseInfo: Boolean = false,
     onLongPress: (() -> Unit)? = null,
     showYearOnly: Boolean = false,
+    yearLabelOverride: String? = null,
     onFocused: () -> Unit = {}
 ) {
     val cardShape = remember(posterCardStyle.cornerRadius) { RoundedCornerShape(posterCardStyle.cornerRadius) }
@@ -371,7 +372,7 @@ fun GridContentCard(
             )
         }
         val releaseLabel = if (showYearOnly) {
-            com.nuvio.tv.ui.screens.home.extractYear(item.releaseInfo)
+            yearLabelOverride ?: com.nuvio.tv.ui.screens.home.extractYear(item.releaseInfo)
         } else {
             item.releaseInfo?.takeIf { showReleaseInfo && showTitle }
         }
