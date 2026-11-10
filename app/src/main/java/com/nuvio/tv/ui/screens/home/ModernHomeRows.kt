@@ -1215,11 +1215,8 @@ private fun ModernCarouselCard(
     } else {
         item.imageUrl ?: item.heroPreview.poster ?: item.heroPreview.backdrop
     }
-    val imageUrl = when {
-        payload == null -> baseImageUrl
-        !payload.focusGifEnabled -> baseImageUrl
-        else -> baseImageUrl
-    }
+    val genrePreviewUrl = if (isCollectionFolder) baseImageUrl?.let(::genreTilePreviewUrl) else null
+    val imageUrl = genrePreviewUrl ?: baseImageUrl
     // GIF overlay: shown on top of the base image only when focused and loaded
     val focusGifUrl = when {
         payload == null -> null
@@ -1247,7 +1244,7 @@ private fun ModernCarouselCard(
 
     val revalidationKey = com.nuvio.tv.core.image.rememberImageRevalidationKey(imageUrl)
     var customPosterLoadFailed by remember(imageUrl) { mutableStateOf(false) }
-    val imageModel = remember(context, imageUrl, requestWidthPx, requestHeightPx, revalidationKey) {
+    val imageModel = remember(context, imageUrl, requestWidthPx, requestHeightPx, revalidationKey, baseImageUrl) {
         imageUrl?.let {
             val builder = ImageRequest.Builder(context)
                 .data(it)
@@ -1258,7 +1255,9 @@ private fun ModernCarouselCard(
                 builder.placeholderMemoryCacheKey("${it}_${requestWidthPx}x${requestHeightPx}_v${revalidationKey - 1}")
             }
             val isLandscapeCustomPoster = useLandscapeOverlayTreatment && !effectiveIgnoreLandscapePoster && !item.metaPreview?.landscapePoster.isNullOrBlank()
-            val fallbackUrl = if (isLandscapeCustomPoster) {
+            val fallbackUrl = if (genrePreviewUrl != null) {
+                baseImageUrl
+            } else if (isLandscapeCustomPoster) {
                 // Landscape custom poster -> fall back to original backdrop
                 item.metaPreview?.background ?: item.heroPreview.backdrop ?: item.metaPreview?.rawPosterUrl
             } else {
@@ -1648,4 +1647,17 @@ private class AnimatedWidthNode(var width: State<Dp>) : LayoutModifierNode, Modi
 
     override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurable: IntrinsicMeasurable, width: Int) =
         measurable.maxIntrinsicHeight(width)
+}
+
+private const val GENRE_COVER_BASE = "https://raw.githubusercontent.com/TheTooth29/epiSLATE-assets/main/collections/genres/cover/"
+
+private val genreTilePreviewNames = setOf(
+    "action", "adventure", "animation", "comedy", "crime", "documentary", "drama", "family", "fantasy",
+    "history", "horror", "music", "mystery", "romance", "scifi", "thriller", "war", "western"
+)
+
+private fun genreTilePreviewUrl(coverUrl: String): String? {
+    if (!coverUrl.startsWith(GENRE_COVER_BASE) || !coverUrl.endsWith(".png")) return null
+    val name = coverUrl.removePrefix(GENRE_COVER_BASE).removeSuffix(".png")
+    return if (name in genreTilePreviewNames) "$GENRE_COVER_BASE$name.jpg" else null
 }
