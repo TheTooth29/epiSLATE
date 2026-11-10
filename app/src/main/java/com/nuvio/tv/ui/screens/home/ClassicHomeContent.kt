@@ -273,12 +273,8 @@ fun ClassicHomeContent(
             focusState.verticalScrollIndex == 0 &&
             focusState.verticalScrollOffset == 0
     }
-    val visibleHomeRows = remember(uiState.homeRows, uiState.catalogRows) {
-        if (uiState.homeRows.isNotEmpty()) {
-            uiState.homeRows
-        } else {
-            uiState.catalogRows.filter { it.items.isNotEmpty() }.map { HomeRow.Catalog(it) }
-        }
+    val visibleHomeRows = remember(uiState.homeRows, uiState.catalogRows, uiState.hideStandaloneCatalogRows) {
+        resolveClassicHomeRows(uiState)
     }
     val visibleRowKeys = remember(visibleHomeRows) {
         visibleHomeRows.mapTo(mutableSetOf()) { row ->

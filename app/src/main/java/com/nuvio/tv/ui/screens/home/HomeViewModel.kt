@@ -121,7 +121,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    internal val _uiState = MutableStateFlow(HomeUiState())
+    internal val _uiState = MutableStateFlow(HomeUiState(hideStandaloneCatalogRows = true))
     internal val shuffleHomeRefresh = MutableStateFlow(HomeShuffleRefresh())
     val uiState: StateFlow<HomeUiState> by lazy { createShuffleHomeState() }
 

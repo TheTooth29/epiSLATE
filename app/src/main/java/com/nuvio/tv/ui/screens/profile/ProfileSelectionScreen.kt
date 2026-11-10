@@ -78,6 +78,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.findRootCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -111,7 +115,7 @@ import com.nuvio.tv.data.remote.supabase.ProfileBackgroundCatalogItem
 import com.nuvio.tv.domain.model.UserProfile
 import com.nuvio.tv.ui.components.AvatarPickerGrid
 import com.nuvio.tv.ui.components.CustomProfileBackgroundImage
-import com.nuvio.tv.ui.components.MemberBrandWordmark
+import com.nuvio.tv.ui.components.EpiSlateProfileWordmark
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.components.ProfileBackgroundImage
 import com.nuvio.tv.ui.components.ProfileBackgroundPicker
@@ -127,7 +131,6 @@ import kotlinx.coroutines.delay
 private object ProfileSelectionSpacing {
     val ScreenPaddingHorizontal = NuvioTheme.spacing.huge
     val ScreenPaddingVertical = NuvioTheme.spacing.xxxl
-    val LogoHeight = 100.dp
     val LogoToHeading = 28.dp
     val HeadingToSubheading = NuvioTheme.spacing.md
     val GridItemGap = 28.dp
@@ -909,11 +912,7 @@ private fun ProfileSelectionMainContent(
             ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        MemberBrandWordmark(
-            height = ProfileSelectionSpacing.LogoHeight,
-            contentDescription = "epiSLATE",
-            drawableOverride = R.drawable.epislate_wordmark
-        )
+        EpiSlateProfileWordmark()
 
         Spacer(modifier = Modifier.height(ProfileSelectionSpacing.LogoToHeading))
 
@@ -931,19 +930,31 @@ private fun ProfileSelectionMainContent(
 
         Spacer(modifier = Modifier.weight(1f, fill = true))
 
-        ProfileGrid(
-            profiles = profiles,
-            activeProfileId = activeProfileId,
-            isManagementMode = isManagementMode,
-            canAddProfile = canAddProfile,
-            profilePinEnabled = profilePinEnabled,
-            avatarImageUrlsById = avatarImageUrlsById,
-            profileThemes = profileThemes,
-            onProfileFocused = onProfileFocused,
-            onProfileSelected = onProfileSelected,
-            onProfileLongPress = onProfileLongPress,
-            onAddProfileClick = onAddProfileClick
-        )
+        var gridOffset by remember { mutableFloatStateOf(0f) }
+        Box(
+            modifier = Modifier.onGloballyPositioned { coordinates ->
+                if (!isManagementMode) {
+                    val centre = coordinates.findRootCoordinates().size.height / 2f
+                    gridOffset = centre - coordinates.positionInRoot().y - coordinates.size.height / 2f
+                }
+            }
+        ) {
+            Box(Modifier.graphicsLayer { translationY = if (isManagementMode) 0f else gridOffset }) {
+                ProfileGrid(
+                    profiles = profiles,
+                    activeProfileId = activeProfileId,
+                    isManagementMode = isManagementMode,
+                    canAddProfile = canAddProfile,
+                    profilePinEnabled = profilePinEnabled,
+                    avatarImageUrlsById = avatarImageUrlsById,
+                    profileThemes = profileThemes,
+                    onProfileFocused = onProfileFocused,
+                    onProfileSelected = onProfileSelected,
+                    onProfileLongPress = onProfileLongPress,
+                    onAddProfileClick = onAddProfileClick
+                )
+            }
+        }
 
         if (!isManagementMode) {
             Spacer(modifier = Modifier.height(12.dp))
