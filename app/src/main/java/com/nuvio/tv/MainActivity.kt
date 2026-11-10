@@ -73,6 +73,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -455,6 +456,7 @@ open class MainActivity : ComponentActivity() {
             var focusedSplashCacheKey by remember { mutableStateOf<String?>(null) }
             var focusedSplashTheme by remember { mutableStateOf<AppTheme?>(null) }
             var onboardingCompletedThisSession by remember { mutableStateOf(false) }
+            var onboardingQrShown by remember { mutableStateOf(false) }
             var onboardingProfileSyncInProgress by remember { mutableStateOf(false) }
             val hasSeenAuthQrFlow = remember(appOnboardingDataStore) {
                 appOnboardingDataStore.hasSeenAuthQrOnFirstLaunch.map<Boolean, Boolean?> { it }
@@ -478,8 +480,8 @@ open class MainActivity : ComponentActivity() {
 
             PartyEffects(partyRepository)
 
-            LaunchedEffect(hasSeenAuthQrOnFirstLaunch, authState) {
-                if (hasSeenAuthQrOnFirstLaunch == false && authState is AuthState.FullAccount) {
+            LaunchedEffect(hasSeenAuthQrOnFirstLaunch, authState, onboardingQrShown) {
+                if (!onboardingQrShown && hasSeenAuthQrOnFirstLaunch == false && authState is AuthState.FullAccount) {
                     appOnboardingDataStore.setHasSeenAuthQrOnFirstLaunch(true)
                     onboardingCompletedThisSession = true
                 }
@@ -788,14 +790,14 @@ open class MainActivity : ComponentActivity() {
                     val surfaceContentReady = hasSeenAuthQrOnFirstLaunch != null &&
                         authState !is AuthState.Loading
 
-                    if (!surfaceContentReady) {
+                    if (onboardingProfileSyncInProgress || !surfaceContentReady) {
                         // Still loading auth state; nothing to show yet.
                     } else if (
-                        hasSeenAuthQrOnFirstLaunch == false &&
-                        authState !is AuthState.FullAccount &&
-                        !onboardingCompletedThisSession
+                        !onboardingCompletedThisSession &&
+                        (onboardingQrShown || (hasSeenAuthQrOnFirstLaunch == false && authState !is AuthState.FullAccount))
                     ) {
                         startupDestination = StartupDestination.Setup
+                        SideEffect { onboardingQrShown = true }
                         AuthQrSignInScreen(
                             onBackPress = { finish() },
                             onContinue = {
