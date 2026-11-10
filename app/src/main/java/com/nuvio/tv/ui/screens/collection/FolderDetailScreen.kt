@@ -321,16 +321,18 @@ private fun TabbedGridContent(
                 style = MaterialTheme.typography.headlineLarge
             )
         }
-        Text(
-            text = folder.title,
-            style = MaterialTheme.typography.headlineMedium.copy(
-                textDirection = folder.title.contentTextDirection()
-            ),
-            color = NuvioTheme.colors.TextPrimary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.widthIn(max = 300.dp)
-        )
+        if (folder.coverImageUrl.isNullOrBlank()) {
+            Text(
+                text = folder.title,
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    textDirection = folder.title.contentTextDirection()
+                ),
+                color = NuvioTheme.colors.TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 300.dp)
+            )
+        }
 
         if (uiState.tabs.size > 1) {
             TabRow(

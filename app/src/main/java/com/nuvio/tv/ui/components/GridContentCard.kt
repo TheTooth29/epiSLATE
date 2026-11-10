@@ -377,15 +377,26 @@ fun GridContentCard(
             item.releaseInfo?.takeIf { showReleaseInfo && showTitle }
         }
         releaseLabel?.let { info ->
-            FocusMarqueeText(
-                text = info,
-                focused = isFocused,
-                style = MaterialTheme.typography.labelMedium,
-                color = NuvioTheme.extendedColors.textSecondary,
-                modifier = Modifier
-                    .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
-                    .padding(top = 2.dp, start = NuvioTheme.spacing.xxs, end = NuvioTheme.spacing.xxs)
-            )
+            val labelModifier = Modifier
+                .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
+                .padding(top = 2.dp, start = NuvioTheme.spacing.xxs, end = NuvioTheme.spacing.xxs)
+            if (showYearOnly) {
+                Text(
+                    text = info,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = NuvioTheme.extendedColors.textSecondary,
+                    textAlign = TextAlign.Center,
+                    modifier = labelModifier
+                )
+            } else {
+                FocusMarqueeText(
+                    text = info,
+                    focused = isFocused,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = NuvioTheme.extendedColors.textSecondary,
+                    modifier = labelModifier
+                )
+            }
         }
     }
 }

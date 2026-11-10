@@ -302,7 +302,7 @@ class TmdbService @Inject constructor(
                 }
                 .minOrNull()
             val label = date?.format(
-                java.time.format.DateTimeFormatter.ofPattern("MMM d, uuuu", java.util.Locale.US)
+                java.time.format.DateTimeFormatter.ofPattern("d MMM uuuu", java.util.Locale.US)
             )
             usDigitalDates.put(videoId, label.orEmpty())
             label
