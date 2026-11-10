@@ -372,7 +372,7 @@ internal fun ModernHomeRowsList(
                     },
                 ),
             contentPadding = PaddingValues(bottom = rowsViewportHeight),
-            verticalArrangement = Arrangement.spacedBy(if (LocalHomepageTileStyling.current) 16.dp else NuvioTheme.spacing.xl)
+            verticalArrangement = Arrangement.spacedBy(if (LocalHomepageTileStyling.current) 12.dp else NuvioTheme.spacing.xl)
         ) {
             itemsIndexed(
                 items = carouselRows.list,

@@ -78,6 +78,7 @@ fun GridContentCard(
     depthSurface: CardDepthSurface = CardDepthSurface.POSTERS,
     showReleaseInfo: Boolean = false,
     onLongPress: (() -> Unit)? = null,
+    showYearOnly: Boolean = false,
     onFocused: () -> Unit = {}
 ) {
     val cardShape = remember(posterCardStyle.cornerRadius) { RoundedCornerShape(posterCardStyle.cornerRadius) }
@@ -357,7 +358,8 @@ fun GridContentCard(
             }
         }
 
-        if (showLabel && (!showLogo || item.logo.isNullOrBlank())) {
+        val showTitle = showLabel && (!showLogo || item.logo.isNullOrBlank())
+        if (showTitle && !showYearOnly) {
             FocusMarqueeText(
                 text = item.name,
                 focused = isFocused,
@@ -367,17 +369,22 @@ fun GridContentCard(
                     .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
                     .padding(top = NuvioTheme.spacing.sm, start = NuvioTheme.spacing.xxs, end = NuvioTheme.spacing.xxs)
             )
-            item.releaseInfo?.takeIf { showReleaseInfo }?.let { info ->
-                FocusMarqueeText(
-                    text = info,
-                    focused = isFocused,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = NuvioTheme.extendedColors.textSecondary,
-                    modifier = Modifier
-                        .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
-                        .padding(top = 2.dp, start = NuvioTheme.spacing.xxs, end = NuvioTheme.spacing.xxs)
-                )
-            }
+        }
+        val releaseLabel = if (showYearOnly) {
+            com.nuvio.tv.ui.screens.home.extractYear(item.releaseInfo)
+        } else {
+            item.releaseInfo?.takeIf { showReleaseInfo && showTitle }
+        }
+        releaseLabel?.let { info ->
+            FocusMarqueeText(
+                text = info,
+                focused = isFocused,
+                style = MaterialTheme.typography.labelMedium,
+                color = NuvioTheme.extendedColors.textSecondary,
+                modifier = Modifier
+                    .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
+                    .padding(top = 2.dp, start = NuvioTheme.spacing.xxs, end = NuvioTheme.spacing.xxs)
+            )
         }
     }
 }

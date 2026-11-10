@@ -501,7 +501,7 @@ private fun TabbedGridContent(
                         posterCardStyle = posterCardStyle,
                         focusRequester = focusReq,
                         isWatched = isItemWatched(item),
-                        showReleaseInfo = true,
+                        showYearOnly = true,
                         onFocused = { lastFocusedItemKey = itemKey },
                         onClick = {
                             HeroBackdropState.update(item.backdropUrl)

@@ -542,25 +542,31 @@ internal fun ModernRowSection(
             } else Modifier
         )
     ) {
-        val titleMediumStyle = MaterialTheme.typography.titleMedium
-        val homepageStyling = LocalHomepageTileStyling.current
-        val rowTitleStyle = remember(titleMediumStyle, homepageStyling) {
-            if (homepageStyling) titleMediumStyle.copy(
-                fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 22.sp
-            ) else titleMediumStyle.copy(fontWeight = FontWeight.SemiBold)
-        }
-        val rowTitle = row.title
-        val textColor = NuvioTheme.colors.TextPrimary
-        val textModifier = remember(rowTitleBottom) {
-            Modifier.padding(start = 52.dp, bottom = rowTitleBottom)
-        }
-        Row(modifier = textModifier, verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = rowTitle,
-                style = rowTitleStyle.copy(textDirection = rowTitle.contentTextDirection()),
-                color = textColor
-            )
-            // Live TV fork: "Live TV ▲" hint when this is the top row.
+        val hideCollectionHeading = LocalHomepageTileStyling.current &&
+            row.items.list.firstOrNull()?.payload is ModernPayload.CollectionFolder
+        if (!hideCollectionHeading) {
+            val titleMediumStyle = MaterialTheme.typography.titleMedium
+            val homepageStyling = LocalHomepageTileStyling.current
+            val rowTitleStyle = remember(titleMediumStyle, homepageStyling) {
+                if (homepageStyling) titleMediumStyle.copy(
+                    fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 22.sp
+                ) else titleMediumStyle.copy(fontWeight = FontWeight.SemiBold)
+            }
+            val rowTitle = row.title
+            val textColor = NuvioTheme.colors.TextPrimary
+            val textModifier = remember(rowTitleBottom) {
+                Modifier.padding(start = 52.dp, bottom = rowTitleBottom)
+            }
+            Row(modifier = textModifier, verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = rowTitle,
+                    style = rowTitleStyle.copy(textDirection = rowTitle.contentTextDirection()),
+                    color = textColor
+                )
+                // Live TV fork: "Live TV ▲" hint when this is the top row.
+                com.nuvio.tv.livetv.home.LiveTvHomeHint()
+            }
+        } else {
             com.nuvio.tv.livetv.home.LiveTvHomeHint()
         }
 
