@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
 import com.nuvio.tv.core.sync.CollectionSyncService
+import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.ValidationResult
 import com.nuvio.tv.domain.model.Collection
@@ -41,6 +42,7 @@ data class CollectionManagementUiState(
 class CollectionManagementViewModel @Inject constructor(
     private val collectionsDataStore: CollectionsDataStore,
     private val collectionSyncService: CollectionSyncService,
+    private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -138,6 +140,7 @@ class CollectionManagementViewModel @Inject constructor(
             val importedIds = imported.map { it.id }.toSet()
             val remaining = _uiState.value.collections.filterNot { it.id in importedIds }
             collectionsDataStore.setCollections(imported + remaining)
+            layoutPreferenceDataStore.applyCollectionImportOrder(imported.map { it.id })
             collectionSyncService.triggerPush()
             _uiState.update { it.copy(showImportDialog = false, importText = "", importError = null) }
         }
@@ -240,6 +243,7 @@ class CollectionManagementViewModel @Inject constructor(
             val importedIds = imported.map { it.id }.toSet()
             val remaining = _uiState.value.collections.filterNot { it.id in importedIds }
             collectionsDataStore.setCollections(imported + remaining)
+            layoutPreferenceDataStore.applyCollectionImportOrder(imported.map { it.id })
             collectionSyncService.triggerPush()
             _uiState.update {
                 it.copy(

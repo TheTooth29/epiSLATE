@@ -543,6 +543,16 @@ class LayoutPreferenceDataStore @Inject constructor(
         }
     }
 
+    suspend fun applyCollectionImportOrder(importedIds: List<String>) {
+        store().edit { prefs ->
+            val saved = parseCatalogKeys(prefs.getStringOrMigrateSet(homeCatalogOrderKeysKey))
+            val reordered = applyImportedCollectionOrder(saved, importedIds)
+            if (reordered != saved) {
+                prefs[homeCatalogOrderKeysKey] = gson.toJson(reordered)
+            }
+        }
+    }
+
     suspend fun setDisabledHomeCatalogKeys(keys: List<String>) {
         val normalizedKeys = normalizeCatalogOrderKeys(keys)
         store().edit { prefs ->
