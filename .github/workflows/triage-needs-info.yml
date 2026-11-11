@@ -1,4 +1,4 @@
-name: Triage (needs-info)
+name: Issues · Triage reports needing info
 
 on:
   issues:

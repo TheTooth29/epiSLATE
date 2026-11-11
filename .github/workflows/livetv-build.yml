@@ -1,4 +1,4 @@
-name: Build Nuvio + IPTV APK
+name: APK · epiSLATE manual or tagged build
 
 # Push a tag like v1.0.0 (or run it by hand from the Actions tab) to build the APK.
 # Tagged builds are attached to a GitHub Release automatically.
@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       test_build:
-        description: "Test build: installs next to your real app as \"Nuvio + IPTV Test\""
+        description: "Test build: installs next to your real app as \"epiSLATE Test\""
         required: false
         type: boolean
         default: false
@@ -110,7 +110,7 @@ jobs:
       - name: Name the test build
         if: ${{ inputs.test_build }}
         run: |
-          # "Nuvio + IPTV" -> "Nuvio + IPTV Test" in every language, so the two apps are easy to
+          # "Nuvio + IPTV" -> "epiSLATE Test" in every language, so the two apps are easy to
           # tell apart on the home screen.
           for f in app/src/full/res/values*/livetv_app_name.xml; do
             sed -i 's#>\([^<]*\)</string>#>\1 Test</string>#' "$f"
@@ -133,14 +133,14 @@ jobs:
         if: ${{ inputs.test_build }}
         run: |
           apk=$(ls out/*.apk | head -n 1)
-          mv "$apk" "out/Nuvio-IPTV-Test-$(date -u +%Y%m%d-%H%M).apk"
+          mv "$apk" "out/epiSLATE-Test-$(date -u +%Y%m%d-%H%M).apk"
           ls -la out
 
       - name: Upload test APK
         if: ${{ inputs.test_build }}
         uses: actions/upload-artifact@v7
         with:
-          path: out/Nuvio-IPTV-Test-*.apk
+          path: out/epiSLATE-Test-*.apk
           # Downloads as the .apk itself instead of a zip.
           archive: false
           if-no-files-found: error
@@ -189,7 +189,7 @@ jobs:
           if [ -z "$folder" ]; then echo "::warning::Couldn't make the Drive folder."; exit 0; fi
 
           # Upload (resumable, for a file this size).
-          apk=$(ls out/Nuvio-IPTV-Test-*.apk | head -n 1)
+          apk=$(ls out/epiSLATE-Test-*.apk | head -n 1)
           name=$(basename "$apk")
           location=$(curl -s -D - -o /dev/null -X POST -H "$auth" \
             -H "Content-Type: application/json; charset=UTF-8" \

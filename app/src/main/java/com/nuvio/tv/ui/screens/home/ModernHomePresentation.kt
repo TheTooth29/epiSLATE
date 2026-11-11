@@ -25,7 +25,8 @@ internal data class ModernHomePresentationInput(
     val showImdbRatings: Boolean,
     val detailImdbRatingsVisibility: com.nuvio.tv.domain.model.DetailImdbRatingsVisibility =
         com.nuvio.tv.domain.model.DetailImdbRatingsVisibility.SHOW_ALL,
-    val localeTag: String
+    val localeTag: String,
+    val hideStandaloneCatalogRows: Boolean = false
 )
 
 internal fun buildModernHomePresentation(
@@ -335,7 +336,12 @@ internal fun buildModernHomePresentation(
     )
 }
 
-private fun resolveVisibleHomeRows(input: ModernHomePresentationInput): List<HomeRow> {
+internal fun resolveVisibleHomeRows(input: ModernHomePresentationInput): List<HomeRow> {
+    if (input.hideStandaloneCatalogRows) {
+        // Only root Home hides addon rows. Collection folder pages reuse this renderer.
+        return visibleCollectionHomeRows(input.homeRows)
+            .filter { it.collection.hasVisibleFolders() }
+    }
     if (input.homeRows.isNotEmpty()) {
         val latestCatalogByKey = input.catalogRows.associateBy(::catalogRowKey)
         return input.homeRows.mapNotNull { homeRow ->
@@ -347,17 +353,11 @@ private fun resolveVisibleHomeRows(input: ModernHomePresentationInput): List<Hom
                 is HomeRow.CollectionRow -> {
                     homeRow.collection.takeIf(Collection::hasVisibleFolders)?.let(HomeRow::CollectionRow)
                 }
-                is HomeRow.PlaceholderCatalog -> {
-                    // Keep placeholder rows as-is — they'll be rendered as shimmer skeletons
-                    homeRow
-                }
+                is HomeRow.PlaceholderCatalog -> homeRow
             }
         }
     }
-
-    return input.catalogRows
-        .filter { it.items.isNotEmpty() }
-        .map(HomeRow::Catalog)
+    return input.catalogRows.filter { it.items.isNotEmpty() }.map(HomeRow::Catalog)
 }
 
 private fun collectionRowKey(collection: Collection): String {

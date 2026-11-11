@@ -1,8 +1,8 @@
-name: PR Full Debug Build Comment
+name: PR · Post test build result
 
 on:
   workflow_run:
-    workflows: ["PR Full Debug Build"]
+    workflows: ["APK · epiSLATE Test"]
     types: [completed]
 
 permissions:
@@ -50,7 +50,7 @@ jobs:
 
             const marker = "<!-- nuvio-full-debug-build -->";
             const runUrl = run.html_url;
-            const artifactName = "app-full-universal-debug.apk";
+            const artifactName = "epiSLATE-test.apk";
             let body;
 
             if (run.conclusion === "success") {

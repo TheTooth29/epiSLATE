@@ -62,7 +62,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nuvio.tv.ui.theme.flickShoBackground
+import com.nuvio.tv.ui.theme.epiSlateBackground
 import androidx.compose.ui.zIndex
 import com.nuvio.tv.R
 import androidx.tv.material3.Border
@@ -702,18 +702,40 @@ fun ModernHomeContent(
     val screenHeight = localConfiguration.screenHeightDp.dp
 
     val homepageBackground = if (rowsOnlyHomepage) {
-        Modifier.background(flickShoBackground())
+        Modifier.background(epiSlateBackground())
     } else Modifier.background(NuvioTheme.colors.Background)
     Box(modifier = Modifier.fillMaxSize().then(homepageBackground)) {
         if (rowsOnlyHomepage) {
-            androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(com.nuvio.tv.R.drawable.flicksho_logo),
-                contentDescription = "flickSHO",
+            val clockFormatter = remember {
+                java.text.SimpleDateFormat("h:mm a", java.util.Locale.US)
+            }
+            val clock = remember { mutableStateOf(clockFormatter.format(java.util.Date())) }
+            LaunchedEffect(Unit) {
+                while (true) {
+                    val now = System.currentTimeMillis()
+                    clockFormatter.timeZone = java.util.TimeZone.getDefault()
+                    clock.value = clockFormatter.format(java.util.Date(now))
+                    delay(60_000L - now % 60_000L)
+                }
+            }
+            androidx.compose.foundation.layout.Row(
                 modifier = Modifier.align(Alignment.TopEnd)
                     .padding(top = 10.dp, end = 32.dp)
-                    .size(width = 88.dp, height = 64.dp)
-                    .zIndex(2f)
-            )
+                    .zIndex(2f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(com.nuvio.tv.R.drawable.epislate_wordmark),
+                    contentDescription = "epiSLATE",
+                    modifier = Modifier.size(width = 105.6.dp, height = 76.8.dp)
+                )
+                Text(
+                    text = clock.value,
+                    modifier = Modifier.padding(start = 12.dp).offset(y = (-2).dp),
+                    color = NuvioTheme.colors.TextPrimary,
+                    fontSize = 14.sp
+                )
+            }
         }
             val posterCardCornerRadius = remember(uiState.posterCardCornerRadiusDp) { uiState.posterCardCornerRadiusDp.dp }
             val rowHorizontalPadding = 52.dp

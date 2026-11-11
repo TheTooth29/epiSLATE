@@ -554,6 +554,13 @@ class LayoutPreferenceDataStore @Inject constructor(
         }
     }
 
+    suspend fun addDisabledHomeCatalogKeys(keys: List<String>) {
+        store().edit { prefs ->
+            val existing = parseCatalogKeys(prefs.getStringOrMigrateSet(disabledHomeCatalogKeysKey))
+            prefs[disabledHomeCatalogKeysKey] = gson.toJson(normalizeCatalogOrderKeys(existing + keys))
+        }
+    }
+
     suspend fun setSidebarCollapsedByDefault(collapsed: Boolean) {
         store().edit { prefs ->
             prefs[sidebarCollapsedKey] = collapsed

@@ -7,7 +7,7 @@ import com.nuvio.tv.ui.theme.NuvioMotion
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.theme.ThemeColors
-import com.nuvio.tv.ui.theme.flickShoBackground
+import com.nuvio.tv.ui.theme.epiSlateBackground
 import com.nuvio.tv.ui.theme.createFocusRingStyle
 
 import android.graphics.Rect
@@ -78,6 +78,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.findRootCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -111,7 +115,7 @@ import com.nuvio.tv.data.remote.supabase.ProfileBackgroundCatalogItem
 import com.nuvio.tv.domain.model.UserProfile
 import com.nuvio.tv.ui.components.AvatarPickerGrid
 import com.nuvio.tv.ui.components.CustomProfileBackgroundImage
-import com.nuvio.tv.ui.components.MemberBrandWordmark
+import com.nuvio.tv.ui.components.EpiSlateProfileWordmark
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.components.ProfileBackgroundImage
 import com.nuvio.tv.ui.components.ProfileBackgroundPicker
@@ -127,7 +131,6 @@ import kotlinx.coroutines.delay
 private object ProfileSelectionSpacing {
     val ScreenPaddingHorizontal = NuvioTheme.spacing.huge
     val ScreenPaddingVertical = NuvioTheme.spacing.xxxl
-    val LogoHeight = 100.dp
     val LogoToHeading = 28.dp
     val HeadingToSubheading = NuvioTheme.spacing.md
     val GridItemGap = 28.dp
@@ -360,7 +363,7 @@ fun ProfileSelectionScreen(
                 profileBackground = profileBackground
             )
         } else {
-            Box(Modifier.fillMaxSize().background(flickShoBackground()))
+            Box(Modifier.fillMaxSize().background(epiSlateBackground()))
         }
 
         AnimatedContent(
@@ -909,11 +912,7 @@ private fun ProfileSelectionMainContent(
             ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        MemberBrandWordmark(
-            height = ProfileSelectionSpacing.LogoHeight,
-            contentDescription = "flickSHO",
-            drawableOverride = R.drawable.flicksho_logo
-        )
+        EpiSlateProfileWordmark(lowerForPicker = !isManagementMode)
 
         Spacer(modifier = Modifier.height(ProfileSelectionSpacing.LogoToHeading))
 
@@ -929,30 +928,44 @@ private fun ProfileSelectionMainContent(
             Spacer(modifier = Modifier.height(ProfileSelectionSpacing.HeadingToSubheading))
         }
 
-        Text(
-            text = screenSubtitle,
-            color = NuvioTheme.colors.TextSecondary,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Medium
-        )
+        Spacer(modifier = Modifier.weight(1f, fill = true))
+
+        var gridOffset by remember { mutableFloatStateOf(0f) }
+        Box(
+            modifier = Modifier.onGloballyPositioned { coordinates ->
+                if (!isManagementMode) {
+                    val centre = coordinates.findRootCoordinates().size.height / 2f
+                    gridOffset = centre - coordinates.positionInRoot().y - coordinates.size.height / 2f
+                }
+            }
+        ) {
+            Box(Modifier.graphicsLayer { translationY = if (isManagementMode) 0f else gridOffset }) {
+                ProfileGrid(
+                    profiles = profiles,
+                    activeProfileId = activeProfileId,
+                    isManagementMode = isManagementMode,
+                    canAddProfile = canAddProfile,
+                    profilePinEnabled = profilePinEnabled,
+                    avatarImageUrlsById = avatarImageUrlsById,
+                    profileThemes = profileThemes,
+                    onProfileFocused = onProfileFocused,
+                    onProfileSelected = onProfileSelected,
+                    onProfileLongPress = onProfileLongPress,
+                    onAddProfileClick = onAddProfileClick
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.weight(1f, fill = true))
 
-        ProfileGrid(
-            profiles = profiles,
-            activeProfileId = activeProfileId,
-            isManagementMode = isManagementMode,
-            canAddProfile = canAddProfile,
-            profilePinEnabled = profilePinEnabled,
-            avatarImageUrlsById = avatarImageUrlsById,
-            profileThemes = profileThemes,
-            onProfileFocused = onProfileFocused,
-            onProfileSelected = onProfileSelected,
-            onProfileLongPress = onProfileLongPress,
-            onAddProfileClick = onAddProfileClick
-        )
-
-        Spacer(modifier = Modifier.weight(1f, fill = true))
+        if (isManagementMode) {
+            Text(
+                text = screenSubtitle,
+                color = NuvioTheme.colors.TextSecondary,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
 
         if (screenHint != null) {
             Text(
@@ -1037,6 +1050,7 @@ private fun ProfileGrid(
                         focusRequester = focusRequesters[index],
                         compact = useCompactCards,
                         profileTheme = profileThemes[profile.id],
+                        isManagementMode = isManagementMode,
                         onFocused = { onProfileFocused(profile) },
                         onClick = { onProfileSelected(profile) },
                         onLongPress = if (isManagementMode) ({ onProfileLongPress(profile) }) else null
@@ -1072,6 +1086,7 @@ private fun ProfileCard(
     focusRequester: FocusRequester,
     compact: Boolean,
     profileTheme: com.nuvio.tv.domain.model.AppTheme? = null,
+    isManagementMode: Boolean,
     onFocused: () -> Unit,
     onClick: () -> Unit,
     onLongPress: (() -> Unit)?
@@ -1090,18 +1105,19 @@ private fun ProfileCard(
             createFocusRingStyle(ThemeColors.getColorPalette(it))
         }
     }
-    val itemScale = 1f + (0.04f * focusProgress)
+    val sizeProgress = if (isManagementMode) focusProgress else 0f
+    val itemScale = 1f + (0.04f * sizeProgress)
     val avatarSize = androidx.compose.ui.unit.lerp(
         if (compact) ProfileSelectionSpacing.CompactAvatarSize else 96.dp,
         if (compact) ProfileSelectionSpacing.CompactFocusedAvatarSize else 102.dp,
-        focusProgress
+        sizeProgress
     )
     val outerAvatarSize = androidx.compose.ui.unit.lerp(
         if (compact) ProfileSelectionSpacing.CompactOuterAvatarSize else 114.dp,
         if (compact) ProfileSelectionSpacing.CompactFocusedOuterAvatarSize else 122.dp,
-        focusProgress
+        sizeProgress
     )
-    val ringWidth = androidx.compose.ui.unit.lerp(NuvioTheme.spacing.hairline, 3.dp, focusProgress)
+    val ringWidth = androidx.compose.ui.unit.lerp(NuvioTheme.spacing.hairline, (if (isManagementMode) 3 else 2).dp, focusProgress)
     val nameColor = lerp(
         NuvioTheme.colors.TextSecondary,
         NuvioTheme.colors.TextPrimary,
@@ -1182,7 +1198,11 @@ private fun ProfileCard(
                         shape = CircleShape
                     )
                     .border(
-                        border = (profileFocusRing ?: NuvioTheme.focusRing).border(ringWidth, focusProgress),
+                        border = if (isManagementMode) {
+                            (profileFocusRing ?: NuvioTheme.focusRing).border(ringWidth, focusProgress)
+                        } else {
+                            BorderStroke(ringWidth, Color(0xFFFFC65C).copy(alpha = focusProgress))
+                        },
                         shape = CircleShape
                     ),
                 contentAlignment = Alignment.Center

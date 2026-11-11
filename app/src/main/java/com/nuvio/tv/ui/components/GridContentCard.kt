@@ -79,6 +79,8 @@ fun GridContentCard(
     showReleaseInfo: Boolean = false,
     collectionGridStyle: Boolean = false,
     onLongPress: (() -> Unit)? = null,
+    showYearOnly: Boolean = false,
+    yearLabelOverride: String? = null,
     onFocused: () -> Unit = {}
 ) {
     val cardShape = remember(posterCardStyle.cornerRadius) { RoundedCornerShape(posterCardStyle.cornerRadius) }
@@ -358,7 +360,8 @@ fun GridContentCard(
             }
         }
 
-        if (showLabel && (!showLogo || item.logo.isNullOrBlank())) {
+        val showTitle = showLabel && (!showLogo || item.logo.isNullOrBlank())
+        if (showTitle && !showYearOnly) {
             FocusMarqueeText(
                 text = item.name,
                 focused = isFocused,
@@ -368,15 +371,31 @@ fun GridContentCard(
                     .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
                     .padding(top = if (collectionGridStyle) 2.dp else NuvioTheme.spacing.sm, start = NuvioTheme.spacing.xxs, end = NuvioTheme.spacing.xxs)
             )
-            item.releaseInfo?.takeIf { showReleaseInfo }?.let { info ->
+        }
+        val releaseLabel = if (showYearOnly) {
+            yearLabelOverride ?: com.nuvio.tv.ui.screens.home.extractYear(item.releaseInfo)
+        } else {
+            item.releaseInfo?.takeIf { showReleaseInfo && showTitle }
+        }
+        releaseLabel?.let { info ->
+            val labelModifier = Modifier
+                .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
+                .padding(top = if (collectionGridStyle) 0.dp else 2.dp, start = NuvioTheme.spacing.xxs, end = NuvioTheme.spacing.xxs)
+            if (showYearOnly) {
+                Text(
+                    text = info,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = NuvioTheme.extendedColors.textSecondary,
+                    textAlign = TextAlign.Center,
+                    modifier = labelModifier
+                )
+            } else {
                 FocusMarqueeText(
                     text = info,
                     focused = isFocused,
                     style = MaterialTheme.typography.labelMedium,
                     color = NuvioTheme.extendedColors.textSecondary,
-                    modifier = Modifier
-                        .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
-                        .padding(top = if (collectionGridStyle) 0.dp else 2.dp, start = NuvioTheme.spacing.xxs, end = NuvioTheme.spacing.xxs)
+                    modifier = labelModifier
                 )
             }
         }

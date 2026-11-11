@@ -215,6 +215,7 @@ private fun ModernContinueWatchingRowItem(
         cardStyle = continueWatchingCardStyle,
         cornerRadius = continueWatchingCornerRadius,
         homepageTileBorder = LocalHomepageTileStyling.current,
+        focusGlowEnabled = !LocalFastScrollActive.current.value,
         isFocused = isCardFocused,
         modifier = modifier
             .focusRequester(requester)
@@ -822,7 +823,7 @@ internal fun ModernRowSection(
 
         val layoutDirection = LocalLayoutDirection.current
         val isRtl = layoutDirection == LayoutDirection.Rtl
-        val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec, rowStartPadding, isRtl) {
+        val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec, rowStartPadding, isRtl, rowListState) {
             val parentStartOffsetPx = with(density) { rowStartPadding.roundToPx() }
             @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
             object : BringIntoViewSpec {
@@ -835,6 +836,21 @@ internal fun ModernRowSection(
                     containerSize: Float
                 ): Float {
                     val childSize = abs(size)
+                    val layout = rowListState.layoutInfo
+                    val firstOfLastFour = layout.visibleItemsInfo.firstOrNull {
+                        it.index == layout.totalItemsCount - 4
+                    }
+                    val lastItem = layout.visibleItemsInfo.lastOrNull()
+                    // Once the final four cards fit, hold their alignment while focus moves within them.
+                    if (firstOfLastFour != null && lastItem != null && lastItem.index == layout.totalItemsCount - 1) {
+                        val groupStart = firstOfLastFour.offset - layout.viewportStartOffset
+                        val groupEnd = lastItem.offset + lastItem.size - layout.viewportStartOffset
+                        val childStart = if (isRtl) containerSize - offset - childSize else offset
+                        val scrollToRowInset = groupStart - parentStartOffsetPx
+                        if (childStart + 1f >= groupStart && groupEnd - scrollToRowInset <= containerSize) {
+                            return if (isRtl) -scrollToRowInset.toFloat() else scrollToRowInset.toFloat()
+                        }
+                    }
                     if (isRtl) {
                         val childSmallerThanParent = childSize <= containerSize
                         val initialTarget = containerSize - parentStartOffsetPx.toFloat()
@@ -971,22 +987,32 @@ internal fun ModernRowSection(
                         }
                     }
 
+                    val clippedTileFade = Modifier.graphicsLayer {
+                        val layout = rowListState.layoutInfo
+                        val bounds = layout.visibleItemsInfo.firstOrNull { it.index == index }
+                        val clipped = bounds != null && (bounds.offset < layout.viewportStartOffset ||
+                            bounds.offset + bounds.size > layout.viewportEndOffset)
+                        alpha = if (clipped && !isTargetItem) 0.25f else 1f
+                    }
+
                     when (val payload = item.payload) {
                         is ModernPayload.ContinueWatching -> {
-                            ModernContinueWatchingRowItem(
-                                payload = payload,
-                                requester = requester,
-                                isTargetItem = isTargetItem,
-                                cardWidth = continueWatchingCardWidth,
-                                imageHeight = continueWatchingCardHeight,
-                                blurUnwatchedEpisodes = blurUnwatchedEpisodes,
-                                useEpisodeThumbnails = useEpisodeThumbnails,
-                                continueWatchingCardStyle = continueWatchingCardStyle,
-                                continueWatchingCornerRadius = continueWatchingCornerRadius,
-                                onFocused = onFocused,
-                                onContinueWatchingClick = onContinueWatchingClick,
-                                onShowOptions = onContinueWatchingOptions
-                            )
+                            Box(modifier = clippedTileFade) {
+                                ModernContinueWatchingRowItem(
+                                    payload = payload,
+                                    requester = requester,
+                                    isTargetItem = isTargetItem,
+                                    cardWidth = continueWatchingCardWidth,
+                                    imageHeight = continueWatchingCardHeight,
+                                    blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+                                    useEpisodeThumbnails = useEpisodeThumbnails,
+                                    continueWatchingCardStyle = continueWatchingCardStyle,
+                                    continueWatchingCornerRadius = continueWatchingCornerRadius,
+                                    onFocused = onFocused,
+                                    onContinueWatchingClick = onContinueWatchingClick,
+                                    onShowOptions = onContinueWatchingOptions
+                                )
+                            }
                         }
 
                         is ModernPayload.Catalog,
@@ -1023,8 +1049,8 @@ internal fun ModernRowSection(
                             }
                             val placeholderFocusBlock = isPlaceholder && index > 0
                             Box(modifier = if (placeholderFocusBlock) {
-                                Modifier.focusProperties { canFocus = false }
-                            } else Modifier) {
+                                clippedTileFade.focusProperties { canFocus = false }
+                            } else clippedTileFade) {
                             ModernCatalogRowItem(
                                 item = item,
                                 payload = payload,
@@ -1189,10 +1215,15 @@ private fun ModernCarouselCard(
     } else {
         item.imageUrl ?: item.heroPreview.poster ?: item.heroPreview.backdrop
     }
-    val imageUrl = when {
-        payload == null -> baseImageUrl
-        !payload.focusGifEnabled -> baseImageUrl
-        else -> baseImageUrl
+    val genrePreviewUrl = if (isCollectionFolder) baseImageUrl?.let(::genreTilePreviewUrl) else null
+    val imageUrl = genrePreviewUrl ?: baseImageUrl
+    val genreTileId = payload?.takeIf {
+        genrePreviewUrl != null || it.collectionTitle.contains("genre", ignoreCase = true)
+    }?.folderId
+    LaunchedEffect(genreTileId, imageUrl) {
+        if (genreTileId != null && imageUrl.isNullOrBlank()) {
+            android.util.Log.i("EpiSlateGenreArt", "tile=$genreTileId cover=missing")
+        }
     }
     // GIF overlay: shown on top of the base image only when focused and loaded
     val focusGifUrl = when {
@@ -1221,7 +1252,7 @@ private fun ModernCarouselCard(
 
     val revalidationKey = com.nuvio.tv.core.image.rememberImageRevalidationKey(imageUrl)
     var customPosterLoadFailed by remember(imageUrl) { mutableStateOf(false) }
-    val imageModel = remember(context, imageUrl, requestWidthPx, requestHeightPx, revalidationKey) {
+    val imageModel = remember(context, imageUrl, requestWidthPx, requestHeightPx, revalidationKey, baseImageUrl) {
         imageUrl?.let {
             val builder = ImageRequest.Builder(context)
                 .data(it)
@@ -1232,7 +1263,9 @@ private fun ModernCarouselCard(
                 builder.placeholderMemoryCacheKey("${it}_${requestWidthPx}x${requestHeightPx}_v${revalidationKey - 1}")
             }
             val isLandscapeCustomPoster = useLandscapeOverlayTreatment && !effectiveIgnoreLandscapePoster && !item.metaPreview?.landscapePoster.isNullOrBlank()
-            val fallbackUrl = if (isLandscapeCustomPoster) {
+            val fallbackUrl = if (genrePreviewUrl != null) {
+                baseImageUrl
+            } else if (isLandscapeCustomPoster) {
                 // Landscape custom poster -> fall back to original backdrop
                 item.metaPreview?.background ?: item.heroPreview.backdrop ?: item.metaPreview?.rawPosterUrl
             } else {
@@ -1429,7 +1462,25 @@ private fun ModernCarouselCard(
                             error = backgroundPainter,
                             fallback = backgroundPainter,
                             contentScale = imageContentScale,
-                            onError = {
+                            onLoading = {
+                                if (genreTileId != null) {
+                                    val source = if (genrePreviewUrl != null) "preview" else "configured"
+                                    android.util.Log.i("EpiSlateGenreArt", "tile=$genreTileId loading=$source")
+                                }
+                            },
+                            onSuccess = { state ->
+                                if (genreTileId != null) {
+                                    val source = if (state.result.request.data != imageUrl) "fallback"
+                                        else if (genrePreviewUrl != null) "preview" else "configured"
+                                    android.util.Log.i("EpiSlateGenreArt", "tile=$genreTileId success=$source cache=${state.result.dataSource}")
+                                }
+                            },
+                            onError = { state ->
+                                if (genreTileId != null) {
+                                    val source = if (state.result.request.data != imageUrl) "fallback"
+                                        else if (genrePreviewUrl != null) "preview" else "configured"
+                                    android.util.Log.w("EpiSlateGenreArt", "tile=$genreTileId failed=$source error=${state.result.throwable.javaClass.simpleName}")
+                                }
                                 if (!item.metaPreview?.landscapePoster.isNullOrBlank() || !item.metaPreview?.rawPosterUrl.isNullOrBlank()) {
                                     customPosterLoadFailed = true
                                 }
@@ -1622,4 +1673,17 @@ private class AnimatedWidthNode(var width: State<Dp>) : LayoutModifierNode, Modi
 
     override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurable: IntrinsicMeasurable, width: Int) =
         measurable.maxIntrinsicHeight(width)
+}
+
+private const val GENRE_COVER_BASE = "https://raw.githubusercontent.com/TheTooth29/epiSLATE-assets/main/collections/genres/cover/"
+
+private val genreTilePreviewNames = setOf(
+    "action", "adventure", "animation", "comedy", "crime", "documentary", "drama", "family", "fantasy",
+    "history", "horror", "music", "mystery", "romance", "scifi", "thriller", "war", "western"
+)
+
+private fun genreTilePreviewUrl(coverUrl: String): String? {
+    if (!coverUrl.startsWith(GENRE_COVER_BASE) || !coverUrl.endsWith(".png")) return null
+    val name = coverUrl.removePrefix(GENRE_COVER_BASE).removeSuffix(".png")
+    return if (name in genreTilePreviewNames) "$GENRE_COVER_BASE$name.jpg" else null
 }

@@ -17,6 +17,7 @@ import com.nuvio.tv.domain.model.WatchProgress
 
 @Immutable
 data class HomeUiState(
+    val hideStandaloneCatalogRows: Boolean = false,
     val catalogRows: List<CatalogRow> = emptyList(),
     val continueWatchingItems: List<ContinueWatchingItem> = emptyList(),
     val upcomingItems: List<ContinueWatchingItem> = emptyList(),

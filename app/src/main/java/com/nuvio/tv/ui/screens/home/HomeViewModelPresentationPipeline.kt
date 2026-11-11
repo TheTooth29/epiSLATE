@@ -320,6 +320,7 @@ internal fun HomeViewModel.observeModernHomePresentationPipeline() {
 
         combine(uiState, _currentLocaleTag, posterOverlay) { state, localeTag, overlay ->
                 ModernHomePresentationInput(
+                    hideStandaloneCatalogRows = true,
                     homeRows = state.homeRows,
                     catalogRows = state.catalogRows,
                     continueWatchingItems = overlay.continueWatchingItems,

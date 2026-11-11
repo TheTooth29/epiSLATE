@@ -281,6 +281,38 @@ class TmdbService @Inject constructor(
     fun cachedTmdbId(imdbId: String): Int? =
         imdbToTmdbCache["$imdbId:movie"] ?: imdbToTmdbCache["$imdbId:tv"]
 
+    private val usDigitalDates = android.util.LruCache<String, String>(256)
+    private val digitalDateDispatcher = Dispatchers.IO.limitedParallelism(4)
+
+    suspend fun usDigitalMovieDate(videoId: String): String? = withContext(digitalDateDispatcher) {
+        usDigitalDates.get(videoId)?.let { return@withContext it.ifEmpty { null } }
+        if (TMDB_API_KEY.isBlank()) return@withContext null
+        val movieId = ensureTmdbId(videoId, "movie")?.toIntOrNull() ?: return@withContext null
+        try {
+            val response = tmdbApi.getMovieReleaseDates(movieId, TMDB_API_KEY)
+            if (!response.isSuccessful) return@withContext null
+            val date = response.body()?.results.orEmpty()
+                .filter { it.iso31661 == "US" }
+                .flatMap { it.releaseDates.orEmpty() }
+                .filter { it.type == 4 }
+                .mapNotNull { entry ->
+                    entry.releaseDate?.take(10)?.let { raw ->
+                        runCatching { java.time.LocalDate.parse(raw) }.getOrNull()
+                    }
+                }
+                .minOrNull()
+            val label = date?.format(
+                java.time.format.DateTimeFormatter.ofPattern("d MMM uuuu", java.util.Locale.US)
+            )
+            usDigitalDates.put(videoId, label.orEmpty())
+            label
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: java.io.IOException) {
+            null
+        }
+    }
+
     fun apiKey(): String = TMDB_API_KEY
 
     /**

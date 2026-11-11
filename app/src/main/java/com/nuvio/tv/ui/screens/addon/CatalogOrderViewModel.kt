@@ -71,6 +71,18 @@ class CatalogOrderViewModel @Inject constructor(
         }
     }
 
+    fun hideCatalogsOnHome(selectedKeys: Set<String>) {
+        val keys = _uiState.value.items
+            .filter { it.canSelectForBulkHide && it.disableKey in selectedKeys }
+            .map { it.disableKey }
+        if (keys.isEmpty()) return
+
+        viewModelScope.launch {
+            layoutPreferenceDataStore.addDisabledHomeCatalogKeys(keys)
+            homeCatalogSettingsSyncService.triggerPush()
+        }
+    }
+
     private fun moveCatalog(key: String, direction: Int) {
         val currentKeys = _uiState.value.items.map { it.key }
         val currentIndex = currentKeys.indexOf(key)
@@ -457,6 +469,9 @@ data class CatalogOrderItem(
     val canMoveUp: Boolean,
     val canMoveDown: Boolean
 )
+
+internal val CatalogOrderItem.canSelectForBulkHide: Boolean
+    get() = typeLabel != "collection" && !isDisabled
 
 private data class CatalogOrderEntry(
     val key: String,

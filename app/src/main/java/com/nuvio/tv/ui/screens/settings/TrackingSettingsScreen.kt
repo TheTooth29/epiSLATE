@@ -40,6 +40,9 @@ import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioTheme
 import kotlinx.coroutines.delay
 
+// Set to true to show Trakt again without removing its integration.
+private const val SHOW_TRAKT_TRACKING = false
+
 @Composable
 fun TrackingSettingsScreen(
     onBackPress: () -> Unit
@@ -77,7 +80,7 @@ fun TrackingSettingsContent(
     val trackingState by trackingViewModel.uiState.collectAsStateWithLifecycle()
     val ownTraktFocusRequester = remember { FocusRequester() }
     val traktFocusRequester = initialFocusRequester ?: ownTraktFocusRequester
-    val simklFocusRequester = remember { FocusRequester() }
+    val simklFocusRequester = if (SHOW_TRAKT_TRACKING) remember { FocusRequester() } else traktFocusRequester
     val mdbListFocusRequester = remember { FocusRequester() }
     val libraryFocusRequester = remember { FocusRequester() }
     val watchProgressFocusRequester = remember { FocusRequester() }
@@ -336,7 +339,7 @@ fun TrackingSettingsContent(
         SettingsSingleChoiceDialog(
             title = stringResource(R.string.trakt_library_source_dialog_title),
             subtitle = stringResource(R.string.tracking_library_source_dialog_subtitle),
-            options = trackingState.availableLibrarySourceModes.map { mode ->
+            options = trackingState.availableLibrarySourceModes.filter { SHOW_TRAKT_TRACKING || it != LibrarySourceMode.TRAKT }.map { mode ->
                 SettingsPickerOption(mode, librarySourceLabel(mode))
             },
             selectedValue = trackingState.librarySourceMode,
@@ -354,7 +357,7 @@ fun TrackingSettingsContent(
         SettingsSingleChoiceDialog(
             title = stringResource(R.string.trakt_watch_progress_dialog_title),
             subtitle = stringResource(R.string.tracking_watch_progress_dialog_subtitle),
-            options = trackingState.availableWatchProgressSources.map { source ->
+            options = trackingState.availableWatchProgressSources.filter { SHOW_TRAKT_TRACKING || it != WatchProgressSource.TRAKT }.map { source ->
                 SettingsPickerOption(source, watchProgressSourceLabel(source))
             },
             selectedValue = trackingState.watchProgressSource,
@@ -414,7 +417,7 @@ fun TrackingSettingsContent(
                     MoreLikeThisSourcePreference.SIMKL,
                     stringResource(R.string.trakt_more_like_this_source_simkl)
                 )
-            ),
+            ).filterIndexed { index, _ -> SHOW_TRAKT_TRACKING || index != 0 },
             selectedValue = traktState.moreLikeThisSource,
             onOptionSelected = { source ->
                 traktViewModel.onMoreLikeThisSourceSelected(source)
@@ -497,7 +500,7 @@ internal fun TrackingSettingsOverview(
     val traktPresentation = traktConnectionPresentation(traktState)
     val simklPresentation = simklConnectionPresentation(simklState)
     val mdbListPresentation = mdbListConnectionPresentation(mdbListState)
-    val traktConnected = traktState.mode == TraktConnectionMode.CONNECTED
+    val traktConnected = SHOW_TRAKT_TRACKING && traktState.mode == TraktConnectionMode.CONNECTED
     val traktProgressActive = trackingState.watchProgressSource == WatchProgressSource.TRAKT
 
     Column(
@@ -522,18 +525,20 @@ internal fun TrackingSettingsOverview(
                         title = stringResource(R.string.tracking_accounts_title),
                         subtitle = stringResource(R.string.tracking_accounts_subtitle)
                     ) {
-                        SettingsActionRow(
-                            title = stringResource(R.string.trakt_name),
-                            subtitle = traktPresentation.subtitle,
-                            value = traktPresentation.value,
-                            valueColor = traktPresentation.color,
-                            leadingRawIconRes = R.raw.trakt_tv_favicon,
-                            leadingArtworkSize = 40.dp,
-                            onClick = onTraktClick,
-                            modifier = Modifier
-                                .focusRequester(traktFocusRequester)
-                                .testTag(TrackingSettingsTestTags.TRAKT_PROVIDER)
-                        )
+                        if (SHOW_TRAKT_TRACKING) {
+                            SettingsActionRow(
+                                title = stringResource(R.string.trakt_name),
+                                subtitle = traktPresentation.subtitle,
+                                value = traktPresentation.value,
+                                valueColor = traktPresentation.color,
+                                leadingRawIconRes = R.raw.trakt_tv_favicon,
+                                leadingArtworkSize = 40.dp,
+                                onClick = onTraktClick,
+                                modifier = Modifier
+                                    .focusRequester(traktFocusRequester)
+                                    .testTag(TrackingSettingsTestTags.TRAKT_PROVIDER)
+                            )
+                        }
                         SettingsActionRow(
                             title = stringResource(R.string.simkl_name),
                             subtitle = simklPresentation.subtitle,

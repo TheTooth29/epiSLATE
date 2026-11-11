@@ -732,6 +732,10 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
         }
         for (key in orderedKeys) {
             if (key in disabledHomeCatalogKeys) continue
+            // Home shows Collections only. Keep catalog loading, storage and source
+            // resolution intact so every addon (including future catalogs) remains
+            // available to Collection folders without creating a standalone row.
+            if (key !in collectionsSnapshot) continue
             val collectionEntry = collectionsSnapshot[key]
             if (collectionEntry != null) {
                 if (!collectionEntry.pinToTop && addedCollectionIds.add(collectionEntry.id)) {

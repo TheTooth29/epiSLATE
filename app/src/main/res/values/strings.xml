@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Nuvio</string>
+    <string name="app_name">epiSLATE</string>
     <string name="tv_channel_continue_watching">Continue Watching</string>
     <string name="type_movie">Movie</string>
     <string name="type_movies">Movies</string>
@@ -511,7 +511,7 @@
     <string name="settings_advanced_subtitle">Performance, navigation, cache, and diagnostics</string>
     <string name="experience_mode_essential">Essential</string>
     <string name="experience_mode_advanced">Advanced</string>
-    <string name="experience_mode_choose_title">Choose your Nuvio experience</string>
+    <string name="experience_mode_choose_title">Choose your epiSLATE experience</string>
     <string name="experience_mode_choose_subtitle">Start simple or unlock every customization. You can switch anytime.</string>
     <string name="experience_mode_essential_card_subtitle">Focused setup, add-ons, playback basics, Trakt, and account settings.</string>
     <string name="experience_mode_advanced_card_subtitle">Full settings, layout controls, catalog order, collections, plug-ins, and diagnostics.</string>
@@ -2263,7 +2263,7 @@
     <string name="custom_server_restart_failed">The server was saved, but the app could not restart automatically. Restart it manually.</string>
 
     <string name="auth_qr_title">Sign In With QR</string>
-    <string name="auth_qr_tagline">Watch your library, anywhere</string>
+    <string name="auth_qr_tagline">Connect your epiSLATE account</string>
     <string name="auth_qr_finishing">Finishing sign in\u2026</string>
     <string name="auth_qr_code_label">Code: %1$s</string>
     <string name="auth_qr_expires">Expires in %1$s</string>
@@ -2370,7 +2370,7 @@
     <string name="catalog_see_all_empty_title">No items available</string>
     <string name="catalog_see_all_empty_subtitle">Try a different catalog or check back later</string>
 
-    <string name="layout_selection_welcome">Welcome to Nuvio</string>
+    <string name="layout_selection_welcome">Welcome to epiSLATE</string>
     <string name="layout_selection_subtitle">Choose your home screen layout</string>
     <string name="layout_selection_continue">Continue</string>
 
@@ -3402,4 +3402,10 @@
     <string name="autosync_label_synced">Auto synced</string>
     <string name="stream_resume_from_time">Resume from %1$s</string>
     <string name="stream_resume_from_percent">Resume from %1$d%%</string>
+    <string name="enable_screensaver">Enable Screensaver</string>
+    <string name="flicksho_account_linking">Account linking powered by Nuvio</string>
+    <string name="catalog_order_bulk_hide">Select catalogs to hide</string>
+    <string name="catalog_order_bulk_hide_apply">Hide selected (%1$d)</string>
+    <string name="catalog_order_bulk_select">Select</string>
+    <string name="catalog_order_bulk_selected">Selected</string>
 </resources>

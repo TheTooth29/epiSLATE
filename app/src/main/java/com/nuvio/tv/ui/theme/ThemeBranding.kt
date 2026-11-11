@@ -17,6 +17,6 @@ val AppTheme.brandWordmarkResource: Int
         else -> R.drawable.app_logo_wordmark
     }
 
-internal fun flickShoBackground(): Brush = Brush.verticalGradient(
+internal fun epiSlateBackground(): Brush = Brush.verticalGradient(
     listOf(Color(0xFF142638), Color(0xFF0B151F), Color(0xFF060B10))
 )
