@@ -149,6 +149,7 @@ fun FolderDetailScreen(
             onNavigateToDetail = onNavigateToDetail,
             onLoadMoreCatalog = viewModel::loadMoreForCatalog,
             onSelectTab = viewModel::selectTab,
+            loadUsDigitalDate = viewModel::usDigitalMovieDate,
             onLoadMoreForSelectedTab = { viewModel.loadMoreItems(viewModel.uiState.value.selectedTabIndex) },
             onSaveFocusState = { vi, vo, rk, ikm, m, ma, ri, ii ->
                 viewModel.saveFollowLayoutFocusState(vi, vo, rk, ikm, m, ma, ri, ii)
@@ -501,7 +502,7 @@ private fun TabbedGridContent(
                 ) { index, item ->
                     val itemKey = "${item.id}_$index"
                     val focusReq = itemFocusRequesters.getOrPut(itemKey) { FocusRequester() }
-                    val useDigitalDate = folder.title.equals("Netflix", ignoreCase = true) && item.apiType == "movie"
+                    val useDigitalDate = item.apiType == "movie"
                     val digitalDate by produceState<String?>(null, item.id, useDigitalDate) {
                         if (useDigitalDate) value = loadUsDigitalDate?.invoke(item.id)
                     }
@@ -901,6 +902,7 @@ private fun FollowLayoutContent(
     onLoadMoreCatalog: (String, String, String) -> Unit = { _, _, _ -> },
     onSelectTab: (Int) -> Unit = {},
     onLoadMoreForSelectedTab: () -> Unit = {},
+    loadUsDigitalDate: (suspend (String) -> String?)? = null,
     onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Map<String, String>, Int, Int) -> Unit,
     onItemFocus: (MetaPreview) -> Unit = {},
     onPreloadAdjacentItem: (MetaPreview) -> Unit = {},
@@ -995,6 +997,7 @@ private fun FollowLayoutContent(
                     folder = uiState.folder ?: return,
                     tabFocusState = FolderDetailGridFocusState(),
                     onSelectTab = onSelectTab,
+                    loadUsDigitalDate = loadUsDigitalDate,
                     onNavigateToDetail = onNavigateToDetail,
                     isItemWatched = isItemWatched,
                     onLoadMore = onLoadMoreForSelectedTab,
