@@ -148,7 +148,6 @@ private const val POSTER_PREFETCH_DISTANCE = 1
 private const val NESTED_PREFETCH_COUNT = 2
 
 internal val LocalHomepageTileStyling = compositionLocalOf { false }
-internal val LocalHomepageTileHeight = compositionLocalOf { 0.dp }
 
 internal val LocalVerticalRowsScrolling = compositionLocalOf<State<Boolean>> { mutableStateOf(false) }
 
@@ -205,15 +204,12 @@ private fun ModernContinueWatchingRowItem(
         }
     }
 
-    val tileHeight = LocalHomepageTileHeight.current
-    val fittedHeight = if (tileHeight > 0.dp) minOf(imageHeight * 1.06f, tileHeight) else imageHeight
-    val fittedWidth = cardWidth * (fittedHeight / imageHeight)
     ContinueWatchingCard(
         item = item,
         onClick = onClick,
         onLongPress = onLongPress,
-        cardWidth = fittedWidth,
-        imageHeight = fittedHeight,
+        cardWidth = cardWidth,
+        imageHeight = imageHeight,
         blurUnwatchedEpisodes = blurUnwatchedEpisodes,
         useEpisodeThumbnails = useEpisodeThumbnails,
         cardStyle = continueWatchingCardStyle,
@@ -370,9 +366,7 @@ private fun ModernCatalogRowItem(
     } else {
         null
     }
-    val homepageTileHeight = LocalHomepageTileHeight.current
     val cardMetrics = remember(
-        homepageTileHeight,
         item,
         useLandscapePosters,
         portraitCatalogCardWidth,
@@ -380,16 +374,13 @@ private fun ModernCatalogRowItem(
         landscapeCatalogCardWidth,
         landscapeCatalogCardHeight
     ) {
-        val base = item.catalogCardMetrics(
+        item.catalogCardMetrics(
             useLandscapePosters = useLandscapePosters,
             portraitCardWidth = portraitCatalogCardWidth,
             portraitCardHeight = portraitCatalogCardHeight,
             landscapeCardWidth = landscapeCatalogCardWidth,
             landscapeCardHeight = landscapeCatalogCardHeight
         )
-        if (homepageTileHeight > 0.dp) {
-            base.copy(width = base.width * (homepageTileHeight / base.height), height = homepageTileHeight)
-        } else base
     }
 
     ModernCarouselCard(
@@ -551,31 +542,25 @@ internal fun ModernRowSection(
             } else Modifier
         )
     ) {
-        val hideCollectionHeading = LocalHomepageTileStyling.current &&
-            row.items.list.firstOrNull()?.payload is ModernPayload.CollectionFolder
-        if (!hideCollectionHeading) {
-            val titleMediumStyle = MaterialTheme.typography.titleMedium
-            val homepageStyling = LocalHomepageTileStyling.current
-            val rowTitleStyle = remember(titleMediumStyle, homepageStyling) {
-                if (homepageStyling) titleMediumStyle.copy(
-                    fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 22.sp
-                ) else titleMediumStyle.copy(fontWeight = FontWeight.SemiBold)
-            }
-            val rowTitle = row.title
-            val textColor = NuvioTheme.colors.TextPrimary
-            val textModifier = remember(rowTitleBottom) {
-                Modifier.padding(start = 52.dp, bottom = rowTitleBottom)
-            }
-            Row(modifier = textModifier, verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = rowTitle,
-                    style = rowTitleStyle.copy(textDirection = rowTitle.contentTextDirection()),
-                    color = textColor
-                )
-                // Live TV fork: "Live TV ▲" hint when this is the top row.
-                com.nuvio.tv.livetv.home.LiveTvHomeHint()
-            }
-        } else {
+        val titleMediumStyle = MaterialTheme.typography.titleMedium
+        val homepageStyling = LocalHomepageTileStyling.current
+        val rowTitleStyle = remember(titleMediumStyle, homepageStyling) {
+            if (homepageStyling) titleMediumStyle.copy(
+                fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 22.sp
+            ) else titleMediumStyle.copy(fontWeight = FontWeight.SemiBold)
+        }
+        val rowTitle = row.title
+        val textColor = NuvioTheme.colors.TextPrimary
+        val textModifier = remember(rowTitleBottom) {
+            Modifier.padding(start = 52.dp, bottom = rowTitleBottom)
+        }
+        Row(modifier = textModifier, verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = rowTitle,
+                style = rowTitleStyle.copy(textDirection = rowTitle.contentTextDirection()),
+                color = textColor
+            )
+            // Live TV fork: "Live TV ▲" hint when this is the top row.
             com.nuvio.tv.livetv.home.LiveTvHomeHint()
         }
 
@@ -958,7 +943,7 @@ internal fun ModernRowSection(
                     }
                     .focusGroup(),
                 contentPadding = PaddingValues(horizontal = rowStartPadding),
-                horizontalArrangement = Arrangement.spacedBy(if (LocalHomepageTileStyling.current) 16.dp else NuvioTheme.spacing.md)
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
             ) {
                 itemsIndexed(
                     items = row.items.list,
@@ -1598,7 +1583,7 @@ private fun ModernCarouselCard(
             }
         }
 
-        if (showLabels && !(LocalHomepageTileStyling.current && isCollectionFolder) && !isBackdropExpanded && item.title.isNotBlank()) {
+        if (showLabels && !isBackdropExpanded && item.title.isNotBlank()) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

@@ -278,7 +278,107 @@ internal fun ModernHomeRowsList(
         null
     }
 
-    val renderRow: @Composable (Int, HeroCarouselRow) -> Unit = { rowIndex, row ->
+    CompositionLocalProvider(
+        LocalBringIntoViewSpec provides verticalRowBringIntoViewSpec,
+        LocalHomepageTileStyling provides rowsOnlyHomepage,
+        LocalFastScrollActive provides isFastScrolling,
+        LocalVerticalRowsScrolling provides isVerticalRowsScrollingState
+    ) {
+        LazyColumn(
+            state = verticalRowListState,
+            modifier = modifier
+                .fillMaxWidth()
+                .recompositionHighlighter()
+                .height(rowsViewportHeight)
+                .padding(bottom = catalogBottomPadding)
+                .clipToBounds()
+                .graphicsLayer { alpha = trailerContentAlpha() }
+                .focusRequester(contentFocusRequester)
+                .focusRestorer { focusRestorerRequester() }
+                .onPreviewKeyEvent { event ->
+                    val firstRowKey = carouselRows.list.firstOrNull()?.key
+                    val lastRowKey = carouselRows.list.lastOrNull()?.key
+                    // Live TV fork: not when the Live TV row is waiting above the top row (with no
+                    // Continue watching, the top row is a catalog whose card expands, and this
+                    // swallowed Up, so the Live TV row could never be opened).
+                    if (event.type == KeyEventType.KeyDown &&
+                        event.key == Key.DirectionUp &&
+                        effectiveExpandEnabled &&
+                        expandedCatalogFocusKey.value != null &&
+                        activeRowKey.value == firstRowKey &&
+                        !(liveTvRowAbove == true && com.nuvio.tv.livetv.home.LiveTvHomeReveal.available.value)
+                    ) return@onPreviewKeyEvent true
+                    if (event.type == KeyEventType.KeyDown &&
+                        event.key == Key.DirectionDown &&
+                        effectiveExpandEnabled &&
+                        expandedCatalogFocusKey.value != null &&
+                        activeRowKey.value == lastRowKey
+                    ) return@onPreviewKeyEvent true
+                    val blockKey = if (layoutDirection == LayoutDirection.Rtl)
+                        Key.DirectionRight else Key.DirectionLeft
+                    if (blockLeftOnFirstExpandedItem &&
+                        event.type == KeyEventType.KeyDown &&
+                        event.key == blockKey &&
+                        effectiveExpandEnabled &&
+                        expandedCatalogFocusKey.value != null &&
+                        activeItemIndex.value == 0
+                    ) return@onPreviewKeyEvent true
+                    false
+                }
+                .dpadVerticalFastScroll(
+                    scrollableState = verticalRowListState,
+                    onFastScrollingChanged = onFastScrollingChanged,
+                    shouldHaltForward = {
+                        val info = verticalRowListState.layoutInfo
+                        val lastIdx = carouselRows.list.size - 1
+                        val lastVisible = info.visibleItemsInfo.lastOrNull { it.index == lastIdx }
+                        lastIdx >= 0 && lastVisible != null &&
+                            lastVisible.offset + lastVisible.size <= info.viewportEndOffset
+                    },
+                    resolveVerticalLanding = { sign ->
+                        val layoutInfo = verticalRowListState.layoutInfo
+                        val visibleItems = layoutInfo.visibleItemsInfo
+                        val lastIdx = carouselRows.list.size - 1
+                        val viewportEnd = layoutInfo.viewportEndOffset
+                        val lastRowAtBottom = lastIdx >= 0 &&
+                            visibleItems.lastOrNull { it.index == lastIdx }?.let {
+                                it.offset + it.size <= viewportEnd
+                            } == true
+                        val upwardTopRow: LazyListItemInfo? = if (sign < 0) {
+                            visibleItems.firstOrNull()?.takeIf {
+                                it.offset > -it.size / 2
+                            }
+                        } else null
+                        val targetRowIndex = when {
+                            lastRowAtBottom -> lastIdx
+                            upwardTopRow != null -> upwardTopRow.index
+                            else ->
+                                visibleItems.firstOrNull { it.offset >= 0 }?.index
+                                    ?: visibleItems.firstOrNull()?.index
+                                    ?: verticalRowListState.firstVisibleItemIndex
+                        }
+                        val targetRow = carouselRows.list.getOrNull(targetRowIndex)
+                        if (targetRow == null) null
+                        else {
+                            val savedIdx = (focusedItemByRowMap[targetRow.key] ?: 0)
+                                .coerceIn(0, (targetRow.items.list.size - 1).coerceAtLeast(0))
+                            latestOnActiveRowKeyChange.value(targetRow.key)
+                            latestOnActiveItemIndexChange.value(savedIdx)
+
+                            val targetItemKey = targetRow.items.list.getOrNull(savedIdx)?.key
+                                ?: "${targetRow.key}_$savedIdx"
+                            targetItemKey
+                        }
+                    },
+                ),
+            contentPadding = PaddingValues(bottom = rowsViewportHeight),
+            verticalArrangement = Arrangement.spacedBy(if (LocalHomepageTileStyling.current) 16.dp else NuvioTheme.spacing.xl)
+        ) {
+            itemsIndexed(
+                items = carouselRows.list,
+                key = { index, row -> "${row.key}_$index" },
+                contentType = { _, row -> row.apiType ?: "modern_home_row" }
+            ) { rowIndex, row ->
                 // Live TV fork: the Live TV row sits with Continue watching (above or below it),
                 // or above the first row when there's no Continue watching.
                 val hasContinueWatching = carouselRows.list.any { it.key == MODERN_CONTINUE_WATCHING_ROW_KEY }
@@ -402,176 +502,6 @@ internal fun ModernHomeRowsList(
                     com.nuvio.tv.livetv.home.LiveTvHomeRow(hideUnlessFocused = true, above = false, startPadding = 52.dp, titleStyle = androidx.tv.material3.MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
                 }
                 }
-    }
-
-
-    if (rowsOnlyHomepage) {
-        val pinnedRow = carouselRows.list.firstOrNull { it.key == MODERN_CONTINUE_WATCHING_ROW_KEY }
-        val scrollingRows = carouselRows.list.filter { it.key != pinnedRow?.key }
-        val pinnedHeight = if (pinnedRow != null) rowsViewportHeight * 0.34f else 0.dp
-        val sectionGap = if (pinnedRow != null) 24.dp else 0.dp
-        val visibleRowCount = if (pinnedRow != null) 2 else 3
-        val collectionViewport = rowsViewportHeight - pinnedHeight - sectionGap
-        val rowSlotHeight = collectionViewport / visibleRowCount
-        val noVerticalBringIntoView = remember {
-            object : BringIntoViewSpec {
-                override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float) = 0f
-            }
-        }
-        // Page boundaries always land on complete rows. Keep D-pad focus on the selected card.
-        LaunchedEffect(activeRowKey.value, scrollingRows.map { it.key }) {
-            val index = scrollingRows.indexOfFirst { it.key == activeRowKey.value }
-            if (index >= 0) verticalRowListState.scrollToItem((index / visibleRowCount) * visibleRowCount)
-        }
-        CompositionLocalProvider(
-            LocalBringIntoViewSpec provides noVerticalBringIntoView,
-            LocalHomepageTileStyling provides true,
-            LocalHomepageTileHeight provides (rowSlotHeight - 20.dp).coerceAtLeast(40.dp),
-            LocalFastScrollActive provides isFastScrolling,
-            LocalVerticalRowsScrolling provides isVerticalRowsScrollingState
-        ) {
-            androidx.compose.foundation.layout.Column(
-                modifier = modifier.fillMaxWidth().height(rowsViewportHeight)
-                    .graphicsLayer { alpha = trailerContentAlpha() }
-                    .focusRequester(contentFocusRequester)
-                    .focusRestorer { focusRestorerRequester() }
-            ) {
-                if (pinnedRow != null) {
-                    androidx.compose.foundation.layout.Box(
-                        modifier = Modifier.fillMaxWidth().height(pinnedHeight),
-                        contentAlignment = Alignment.TopStart
-                    ) {
-                        renderRow(carouselRows.list.indexOf(pinnedRow), pinnedRow)
-                    }
-                    androidx.compose.foundation.layout.Spacer(Modifier.height(sectionGap))
-                }
-                LazyColumn(
-                    state = verticalRowListState,
-                    modifier = Modifier.fillMaxWidth().height(collectionViewport).clipToBounds(),
-                    userScrollEnabled = false,
-                    // Blank final slots preserve the same geometry on an incomplete last page.
-                    contentPadding = PaddingValues(bottom = rowSlotHeight * (visibleRowCount - 1))
-                ) {
-                    itemsIndexed(
-                        items = scrollingRows,
-                        key = { _, row -> row.key },
-                        contentType = { _, _ -> "homepage_collection_slot" }
-                    ) { _, row ->
-                        androidx.compose.foundation.layout.Box(
-                            modifier = Modifier.fillMaxWidth().height(rowSlotHeight),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            renderRow(carouselRows.list.indexOf(row), row)
-                        }
-                    }
-                }
-            }
-        }
-        return
-    }
-
-    CompositionLocalProvider(
-        LocalBringIntoViewSpec provides verticalRowBringIntoViewSpec,
-        LocalHomepageTileStyling provides rowsOnlyHomepage,
-        LocalFastScrollActive provides isFastScrolling,
-        LocalVerticalRowsScrolling provides isVerticalRowsScrollingState
-    ) {
-        LazyColumn(
-            state = verticalRowListState,
-            modifier = modifier
-                .fillMaxWidth()
-                .recompositionHighlighter()
-                .height(rowsViewportHeight)
-                .padding(bottom = catalogBottomPadding)
-                .clipToBounds()
-                .graphicsLayer { alpha = trailerContentAlpha() }
-                .focusRequester(contentFocusRequester)
-                .focusRestorer { focusRestorerRequester() }
-                .onPreviewKeyEvent { event ->
-                    val firstRowKey = carouselRows.list.firstOrNull()?.key
-                    val lastRowKey = carouselRows.list.lastOrNull()?.key
-                    // Live TV fork: not when the Live TV row is waiting above the top row (with no
-                    // Continue watching, the top row is a catalog whose card expands, and this
-                    // swallowed Up, so the Live TV row could never be opened).
-                    if (event.type == KeyEventType.KeyDown &&
-                        event.key == Key.DirectionUp &&
-                        effectiveExpandEnabled &&
-                        expandedCatalogFocusKey.value != null &&
-                        activeRowKey.value == firstRowKey &&
-                        !(liveTvRowAbove == true && com.nuvio.tv.livetv.home.LiveTvHomeReveal.available.value)
-                    ) return@onPreviewKeyEvent true
-                    if (event.type == KeyEventType.KeyDown &&
-                        event.key == Key.DirectionDown &&
-                        effectiveExpandEnabled &&
-                        expandedCatalogFocusKey.value != null &&
-                        activeRowKey.value == lastRowKey
-                    ) return@onPreviewKeyEvent true
-                    val blockKey = if (layoutDirection == LayoutDirection.Rtl)
-                        Key.DirectionRight else Key.DirectionLeft
-                    if (blockLeftOnFirstExpandedItem &&
-                        event.type == KeyEventType.KeyDown &&
-                        event.key == blockKey &&
-                        effectiveExpandEnabled &&
-                        expandedCatalogFocusKey.value != null &&
-                        activeItemIndex.value == 0
-                    ) return@onPreviewKeyEvent true
-                    false
-                }
-                .dpadVerticalFastScroll(
-                    scrollableState = verticalRowListState,
-                    onFastScrollingChanged = onFastScrollingChanged,
-                    shouldHaltForward = {
-                        val info = verticalRowListState.layoutInfo
-                        val lastIdx = carouselRows.list.size - 1
-                        val lastVisible = info.visibleItemsInfo.lastOrNull { it.index == lastIdx }
-                        lastIdx >= 0 && lastVisible != null &&
-                            lastVisible.offset + lastVisible.size <= info.viewportEndOffset
-                    },
-                    resolveVerticalLanding = { sign ->
-                        val layoutInfo = verticalRowListState.layoutInfo
-                        val visibleItems = layoutInfo.visibleItemsInfo
-                        val lastIdx = carouselRows.list.size - 1
-                        val viewportEnd = layoutInfo.viewportEndOffset
-                        val lastRowAtBottom = lastIdx >= 0 &&
-                            visibleItems.lastOrNull { it.index == lastIdx }?.let {
-                                it.offset + it.size <= viewportEnd
-                            } == true
-                        val upwardTopRow: LazyListItemInfo? = if (sign < 0) {
-                            visibleItems.firstOrNull()?.takeIf {
-                                it.offset > -it.size / 2
-                            }
-                        } else null
-                        val targetRowIndex = when {
-                            lastRowAtBottom -> lastIdx
-                            upwardTopRow != null -> upwardTopRow.index
-                            else ->
-                                visibleItems.firstOrNull { it.offset >= 0 }?.index
-                                    ?: visibleItems.firstOrNull()?.index
-                                    ?: verticalRowListState.firstVisibleItemIndex
-                        }
-                        val targetRow = carouselRows.list.getOrNull(targetRowIndex)
-                        if (targetRow == null) null
-                        else {
-                            val savedIdx = (focusedItemByRowMap[targetRow.key] ?: 0)
-                                .coerceIn(0, (targetRow.items.list.size - 1).coerceAtLeast(0))
-                            latestOnActiveRowKeyChange.value(targetRow.key)
-                            latestOnActiveItemIndexChange.value(savedIdx)
-
-                            val targetItemKey = targetRow.items.list.getOrNull(savedIdx)?.key
-                                ?: "${targetRow.key}_$savedIdx"
-                            targetItemKey
-                        }
-                    },
-                ),
-            contentPadding = PaddingValues(bottom = rowsViewportHeight),
-            verticalArrangement = Arrangement.spacedBy(if (LocalHomepageTileStyling.current) 12.dp else NuvioTheme.spacing.xl)
-        ) {
-            itemsIndexed(
-                items = carouselRows.list,
-                key = { index, row -> "${row.key}_$index" },
-                contentType = { _, row -> row.apiType ?: "modern_home_row" }
-            ) { rowIndex, row ->
-                renderRow(rowIndex, row)
             }
         }
     }
