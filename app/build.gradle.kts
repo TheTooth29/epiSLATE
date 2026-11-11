@@ -402,7 +402,14 @@ androidComponents {
         // Test builds (-PlivetvTestBuild=true) get their own ID, so they install next to the
         // real app instead of replacing it.
         val testBuild = (findProperty("livetvTestBuild") as String?)?.toBoolean() == true
-        if (!isPlaystore) variant.applicationId.set(if (testBuild) "com.nuvio.livetv.test" else "com.nuvio.livetv")
+        val collectionReviewBuild = (findProperty("epislateCollectionReviewBuild") as String?)?.toBoolean() == true
+        if (!isPlaystore) variant.applicationId.set(
+            when {
+                collectionReviewBuild -> "com.nuvio.livetv.epislate.collectionreview20261111"
+                testBuild -> "com.nuvio.livetv.test"
+                else -> "com.nuvio.livetv"
+            }
+        )
     }
     // Only the full flavor ships the in-app updater.
     onVariants(selector().withFlavor("distribution" to "full")) { variant ->

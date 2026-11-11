@@ -18,9 +18,9 @@ aapt = str(aapts[-1])
 badging = subprocess.check_output([aapt, "dump", "badging", str(apk)], text=True)
 package = re.search(r"^package: name='([^']+)'", badging, re.M)
 labels = re.findall(r"^application-label(?:-[^:]+)?:'([^']*)'", badging, re.M)
-if not package or package.group(1) != "com.nuvio.livetv.test":
+if not package or package.group(1) != "com.nuvio.livetv.epislate.collectionreview20261111":
     raise SystemExit("APK is not the standalone test application")
-if not labels or set(labels) != {"epiSLATE Test"}:
+if not labels or set(labels) != {"epiSLATE Collection Test"}:
     raise SystemExit(f"Wrong packaged app labels: {sorted(set(labels))}")
 resources = subprocess.check_output([aapt, "dump", "resources", str(apk)], text=True)
 if "drawable/epislate_wordmark" not in resources:

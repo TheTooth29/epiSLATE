@@ -138,11 +138,11 @@ jobs:
       - name: Set the test app label
         run: |
           for f in app/src/full/res/values*/livetv_app_name.xml; do
-            sed -i 's#>\([^<]*\)</string>#>\1 Test</string>#' "$f"
+            sed -i 's#>[^<]*</string>#>epiSLATE Collection Test</string>#' "$f"
           done
 
       - name: Test updater and build signed epiSLATE Test APK
-        run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' --tests 'com.nuvio.tv.ui.screens.home.HomeRowVisibilityTest' :app:assembleFullRelease --stacktrace -PlivetvTestBuild=true -PlivetvBuildNumber=2
+        run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' --tests 'com.nuvio.tv.ui.screens.home.HomeRowVisibilityTest' :app:assembleFullRelease --stacktrace -PlivetvTestBuild=true -PepislateCollectionReviewBuild=true -PlivetvBuildNumber=3
 
       - name: Name epiSLATE test APK
         run: |
