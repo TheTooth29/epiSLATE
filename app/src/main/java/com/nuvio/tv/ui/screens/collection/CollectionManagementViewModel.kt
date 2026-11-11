@@ -133,17 +133,11 @@ class CollectionManagementViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            val current = _uiState.value.collections.toMutableList()
-            val existingIds = current.map { it.id }.toSet()
-            for (collection in imported) {
-                if (collection.id in existingIds) {
-                    val index = current.indexOfFirst { it.id == collection.id }
-                    if (index >= 0) current[index] = collection
-                } else {
-                    current.add(collection)
-                }
-            }
-            collectionsDataStore.setCollections(current)
+            // The imported JSON defines collection order. Retain any collections
+            // not included in the import after the imported entries.
+            val importedIds = imported.map { it.id }.toSet()
+            val remaining = _uiState.value.collections.filterNot { it.id in importedIds }
+            collectionsDataStore.setCollections(imported + remaining)
             collectionSyncService.triggerPush()
             _uiState.update { it.copy(showImportDialog = false, importText = "", importError = null) }
         }
@@ -241,17 +235,11 @@ class CollectionManagementViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            val current = _uiState.value.collections.toMutableList()
-            val existingIds = current.map { it.id }.toSet()
-            for (collection in imported) {
-                if (collection.id in existingIds) {
-                    val index = current.indexOfFirst { it.id == collection.id }
-                    if (index >= 0) current[index] = collection
-                } else {
-                    current.add(collection)
-                }
-            }
-            collectionsDataStore.setCollections(current)
+            // The imported JSON defines collection order. Retain any collections
+            // not included in the import after the imported entries.
+            val importedIds = imported.map { it.id }.toSet()
+            val remaining = _uiState.value.collections.filterNot { it.id in importedIds }
+            collectionsDataStore.setCollections(imported + remaining)
             collectionSyncService.triggerPush()
             _uiState.update {
                 it.copy(
