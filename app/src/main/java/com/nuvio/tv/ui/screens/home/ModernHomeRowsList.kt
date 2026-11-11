@@ -22,6 +22,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -43,6 +44,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Dp
@@ -257,6 +259,26 @@ internal fun ModernHomeRowsList(
 
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
 
+    // Measure complete rows, including the Continue Watching heading and focus padding.
+    // Key measurements by row identity so loading or reordered collections cannot reuse stale sizes.
+    val firstThreeRowKeys = carouselRows.list.take(3).map { it.key }
+    val homepageRowHeights = remember(firstThreeRowKeys, density) { mutableStateMapOf<String, Int>() }
+    val homepageRowSpacing = 12.dp
+    val homepageBottomInset = 12.dp
+    val measuredHomepageHeight = if (firstThreeRowKeys.isNotEmpty() &&
+        firstThreeRowKeys.all { homepageRowHeights.containsKey(it) }
+    ) {
+        with(density) { firstThreeRowKeys.sumOf { homepageRowHeights.getValue(it) }.toDp() } +
+            homepageRowSpacing * (firstThreeRowKeys.size - 1) + homepageBottomInset
+    } else {
+        rowsViewportHeight
+    }
+    val viewportHeight = if (rowsOnlyHomepage) {
+        measuredHomepageHeight.coerceAtMost(rowsViewportHeight)
+    } else {
+        rowsViewportHeight
+    }
+
     // Only run the shared shimmer while a row on screen actually draws it: rememberInfiniteTransition
     // keeps waking the Compose frame clock on every frame for as long as it is composed, even when
     // nothing reads its value. Rows below the fold stay placeholders until they are scrolled to, so
@@ -289,7 +311,7 @@ internal fun ModernHomeRowsList(
             modifier = modifier
                 .fillMaxWidth()
                 .recompositionHighlighter()
-                .height(rowsViewportHeight)
+                .height(viewportHeight)
                 .padding(bottom = catalogBottomPadding)
                 .clipToBounds()
                 .graphicsLayer { alpha = trailerContentAlpha() }
@@ -372,7 +394,7 @@ internal fun ModernHomeRowsList(
                     },
                 ),
             contentPadding = PaddingValues(bottom = rowsViewportHeight),
-            verticalArrangement = Arrangement.spacedBy(if (LocalHomepageTileStyling.current) 12.dp else NuvioTheme.spacing.xl)
+            verticalArrangement = Arrangement.spacedBy(if (rowsOnlyHomepage) homepageRowSpacing else NuvioTheme.spacing.xl)
         ) {
             itemsIndexed(
                 items = carouselRows.list,
@@ -436,7 +458,11 @@ internal fun ModernHomeRowsList(
                         }
                     }
                 }
-                androidx.compose.foundation.layout.Column {
+                androidx.compose.foundation.layout.Column(
+                    modifier = if (rowsOnlyHomepage && row.key in firstThreeRowKeys) {
+                        Modifier.onSizeChanged { homepageRowHeights[row.key] = it.height }
+                    } else Modifier
+                ) {
                 if (liveTvHere && (liveTvRowAbove == true || !hasContinueWatching)) {
                     com.nuvio.tv.livetv.home.LiveTvHomeRow(hideUnlessFocused = true, above = liveTvRowAbove == true, startPadding = 52.dp, titleStyle = androidx.tv.material3.MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
                 }

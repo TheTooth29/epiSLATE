@@ -1328,7 +1328,8 @@ fun ModernHomeContent(
                 blockLeftOnFirstExpandedItem = blockLeftOnFirstExpandedItem,
                 isVerticalRowsScrollingState = isVerticalRowsScrollingState,
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
+                    .align(if (rowsOnlyHomepage) Alignment.TopStart else Alignment.BottomStart)
+                    .then(if (rowsOnlyHomepage) Modifier.padding(top = screenHeight * 0.10f) else Modifier)
                     .onFocusChanged { contentHasFocus.value = it.hasFocus }
             )
     }
