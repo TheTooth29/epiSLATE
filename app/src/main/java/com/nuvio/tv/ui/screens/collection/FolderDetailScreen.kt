@@ -288,93 +288,68 @@ private fun TabbedGridContent(
         tabFocusRequesters.getOrNull(uiState.selectedTabIndex)?.let { runCatching { it.requestFocus() } }
     }
 
-    Row(
+    // Collection grid header: a readable section title above compact source tabs.
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl, top = NuvioTheme.spacing.sm, bottom = NuvioTheme.spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+            .padding(start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl, top = NuvioTheme.spacing.sm, bottom = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        if (!folder.coverImageUrl.isNullOrBlank()) {
-            val iconWidth: androidx.compose.ui.unit.Dp
-            val iconHeight: androidx.compose.ui.unit.Dp
-            when (folder.tileShape) {
-                com.nuvio.tv.domain.model.PosterShape.POSTER -> { iconWidth = NuvioTheme.spacing.xxl; iconHeight = NuvioTheme.spacing.xxxl }
-                com.nuvio.tv.domain.model.PosterShape.LANDSCAPE -> { iconWidth = 64.dp; iconHeight = 36.dp }
-                com.nuvio.tv.domain.model.PosterShape.SQUARE -> { iconWidth = NuvioTheme.spacing.xxxl; iconHeight = NuvioTheme.spacing.xxxl }
-            }
-            AsyncImage(
-                model = folder.coverImageUrl,
-                contentDescription = folder.title,
-                modifier = Modifier
-                    .width(iconWidth)
-                    .height(iconHeight)
-                    .clip(RoundedCornerShape(NuvioTheme.radii.sm)),
-                contentScale = ContentScale.FillBounds
-            )
-        } else if (!folder.coverEmoji.isNullOrBlank()) {
-            Text(
-                text = folder.coverEmoji,
-                style = MaterialTheme.typography.headlineLarge
-            )
-        }
         Text(
             text = folder.title,
-            style = MaterialTheme.typography.headlineMedium.copy(
+            style = MaterialTheme.typography.titleLarge.copy(
                 textDirection = folder.title.contentTextDirection()
             ),
             color = NuvioTheme.colors.TextPrimary,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.widthIn(max = 300.dp)
+            overflow = TextOverflow.Ellipsis
         )
-
-        if (uiState.tabs.size > 1) {
-            TabRow(
-                selectedTabIndex = uiState.selectedTabIndex,
-                modifier = Modifier
-                    .focusRestorer {
-                        tabFocusRequesters.getOrNull(uiState.selectedTabIndex) ?: FocusRequester.Default
-                    }
-            ) {
-                uiState.tabs.forEachIndexed { index, tab ->
-                    Tab(
-                        selected = index == uiState.selectedTabIndex,
-                        onFocus = { onSelectTab(index) },
-                        onClick = {
-                            onSelectTab(index)
-                            gridScrollToTopTrigger++
-                        },
-                        modifier = if (index < tabFocusRequesters.size) {
-                            Modifier.focusRequester(tabFocusRequesters[index])
-                        } else Modifier
+    if (uiState.tabs.size > 1) {
+        TabRow(
+            selectedTabIndex = uiState.selectedTabIndex,
+            modifier = Modifier
+                .focusRestorer {
+                    tabFocusRequesters.getOrNull(uiState.selectedTabIndex) ?: FocusRequester.Default
+                }
+        ) {
+            uiState.tabs.forEachIndexed { index, tab ->
+                Tab(
+                    selected = index == uiState.selectedTabIndex,
+                    onFocus = { onSelectTab(index) },
+                    onClick = {
+                        onSelectTab(index)
+                        gridScrollToTopTrigger++
+                    },
+                    modifier = if (index < tabFocusRequesters.size) {
+                        Modifier.focusRequester(tabFocusRequesters[index])
+                    } else Modifier
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = NuvioTheme.spacing.lg, vertical = NuvioTheme.spacing.sm),
+                        horizontalAlignment = Alignment.Start
                     ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = NuvioTheme.spacing.lg, vertical = NuvioTheme.spacing.sm),
-                            horizontalAlignment = Alignment.Start
-                        ) {
-                            Text(
-                                text = if (tab.isAllTab) stringResource(R.string.collections_tab_all) else tab.label,
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                            if (uiState.catalogTypeSuffixEnabled && tab.typeLabel.isNotBlank()) {
-                                val localizedType = when {
-                                    tab.isAllTab -> stringResource(R.string.collections_tab_combined)
-                                    tab.rawType.lowercase() == "movie" -> stringResource(R.string.type_movie)
-                                    tab.rawType.lowercase() == "series" -> stringResource(R.string.type_series)
-                                    else -> tab.typeLabel
-                                }
-                                Text(
-                                    text = localizedType,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = NuvioTheme.colors.TextTertiary
-                                )
+                        Text(
+                            text = if (tab.isAllTab) stringResource(R.string.collections_tab_all) else tab.label,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                        if (uiState.catalogTypeSuffixEnabled && tab.typeLabel.isNotBlank()) {
+                            val localizedType = when {
+                                tab.isAllTab -> stringResource(R.string.collections_tab_combined)
+                                tab.rawType.lowercase() == "movie" -> stringResource(R.string.type_movie)
+                                tab.rawType.lowercase() == "series" -> stringResource(R.string.type_series)
+                                else -> tab.typeLabel
                             }
+                            Text(
+                                text = localizedType,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = NuvioTheme.colors.TextTertiary
+                            )
                         }
                     }
                 }
             }
         }
+    }
     }
 
     val currentTab = uiState.tabs.getOrNull(uiState.selectedTabIndex)
@@ -484,11 +459,11 @@ private fun TabbedGridContent(
                 contentPadding = PaddingValues(
                     start = NuvioTheme.spacing.xxxl,
                     end = NuvioTheme.spacing.xxxl,
-                    top = NuvioTheme.spacing.lg,
+                    top = NuvioTheme.spacing.sm,
                     bottom = NuvioTheme.spacing.xxxl
                 ),
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg),
-                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
             ) {
                 itemsIndexed(
                     items = items,
@@ -502,6 +477,7 @@ private fun TabbedGridContent(
                         focusRequester = focusReq,
                         isWatched = isItemWatched(item),
                         showReleaseInfo = true,
+                        collectionGridStyle = true,
                         onFocused = { lastFocusedItemKey = itemKey },
                         onClick = {
                             HeroBackdropState.update(item.backdropUrl)
