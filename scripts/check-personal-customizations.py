@@ -24,7 +24,9 @@ require("app/build.gradle.kts",
 require("app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt",
         "val collectionHero = activeCarouselItemState.value?.payload as? ModernPayload.CollectionFolder",
         "!collectionHero.heroBackdropUrl.isNullOrBlank()",
-        "!collectionHero.heroVideoUrl.isNullOrBlank()", "if (showHeroMedia) {")
+        "!collectionHero.heroVideoUrl.isNullOrBlank()",
+        # Rows-only home must suppress hero media even when a collection has it.
+        "if (!rowsOnlyHomepage && showHeroMedia) {")
 for workflow in [".github/workflows/pr-full-debug-build.yml", ".github/workflows/livetv-build.yml"]:
     require(workflow, "secrets.NUVIO_BACKEND_URL", "secrets.NUVIO_BACKEND_KEY", "secrets.TMDB_API_KEY",
             "add NUVIO_SUPABASE_URL", "add NUVIO_SUPABASE_ANON_KEY", "add TMDB_API_KEY")
