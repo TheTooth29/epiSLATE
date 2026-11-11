@@ -22,6 +22,16 @@ class CollectionImportOrderTest {
         assertEquals(listOf("addon"), applyImportedCollectionOrder(listOf("addon"), listOf("a", "b")))
     }
 
+    @Test fun manualReorderAfterImportTakesEffect() {
+        val afterImport = applyImportedCollectionOrder(
+            listOf("collection_discover", "collection_streaming", "addon"),
+            listOf("streaming", "discover")
+        )
+        assertEquals(listOf("collection_streaming", "collection_discover", "addon"), afterImport)
+        val afterManualMove = applyImportedCollectionOrder(afterImport, listOf("discover", "streaming"))
+        assertEquals(listOf("collection_discover", "collection_streaming", "addon"), afterManualMove)
+    }
+
     @Test fun repeatedImportIsStable() {
         val first = applyImportedCollectionOrder(listOf("addon", "collection_b", "collection_a"), listOf("a", "b"))
         assertEquals(first, applyImportedCollectionOrder(first, listOf("a", "b")))

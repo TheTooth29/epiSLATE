@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
+import com.nuvio.tv.core.sync.HomeCatalogSettingsSyncService
 import com.nuvio.tv.core.sync.CollectionSyncService
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.CollectionsDataStore
@@ -42,6 +43,7 @@ data class CollectionManagementUiState(
 class CollectionManagementViewModel @Inject constructor(
     private val collectionsDataStore: CollectionsDataStore,
     private val collectionSyncService: CollectionSyncService,
+    private val homeCatalogSettingsSyncService: HomeCatalogSettingsSyncService,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
@@ -73,6 +75,8 @@ class CollectionManagementViewModel @Inject constructor(
             val item = current.removeAt(index)
             current.add(index - 1, item)
             collectionsDataStore.setCollections(current)
+            layoutPreferenceDataStore.applyCollectionImportOrder(current.map { it.id })
+            homeCatalogSettingsSyncService.triggerPush()
             collectionSyncService.triggerPush()
         }
     }
@@ -85,6 +89,8 @@ class CollectionManagementViewModel @Inject constructor(
             val item = mutableList.removeAt(index)
             mutableList.add(index + 1, item)
             collectionsDataStore.setCollections(mutableList)
+            layoutPreferenceDataStore.applyCollectionImportOrder(mutableList.map { it.id })
+            homeCatalogSettingsSyncService.triggerPush()
             collectionSyncService.triggerPush()
         }
     }
@@ -141,6 +147,7 @@ class CollectionManagementViewModel @Inject constructor(
             val remaining = _uiState.value.collections.filterNot { it.id in importedIds }
             collectionsDataStore.setCollections(imported + remaining)
             layoutPreferenceDataStore.applyCollectionImportOrder(imported.map { it.id })
+            homeCatalogSettingsSyncService.triggerPush()
             collectionSyncService.triggerPush()
             _uiState.update { it.copy(showImportDialog = false, importText = "", importError = null) }
         }
@@ -244,6 +251,7 @@ class CollectionManagementViewModel @Inject constructor(
             val remaining = _uiState.value.collections.filterNot { it.id in importedIds }
             collectionsDataStore.setCollections(imported + remaining)
             layoutPreferenceDataStore.applyCollectionImportOrder(imported.map { it.id })
+            homeCatalogSettingsSyncService.triggerPush()
             collectionSyncService.triggerPush()
             _uiState.update {
                 it.copy(
