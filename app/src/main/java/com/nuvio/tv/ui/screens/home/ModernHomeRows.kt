@@ -148,6 +148,7 @@ private const val POSTER_PREFETCH_DISTANCE = 1
 private const val NESTED_PREFETCH_COUNT = 2
 
 internal val LocalHomepageTileStyling = compositionLocalOf { false }
+internal val LocalHomepageTileHeight = compositionLocalOf { 0.dp }
 
 internal val LocalVerticalRowsScrolling = compositionLocalOf<State<Boolean>> { mutableStateOf(false) }
 
@@ -204,12 +205,15 @@ private fun ModernContinueWatchingRowItem(
         }
     }
 
+    val tileHeight = LocalHomepageTileHeight.current
+    val fittedHeight = if (tileHeight > 0.dp) minOf(imageHeight * 1.06f, tileHeight) else imageHeight
+    val fittedWidth = cardWidth * (fittedHeight / imageHeight)
     ContinueWatchingCard(
         item = item,
         onClick = onClick,
         onLongPress = onLongPress,
-        cardWidth = cardWidth,
-        imageHeight = imageHeight,
+        cardWidth = fittedWidth,
+        imageHeight = fittedHeight,
         blurUnwatchedEpisodes = blurUnwatchedEpisodes,
         useEpisodeThumbnails = useEpisodeThumbnails,
         cardStyle = continueWatchingCardStyle,
@@ -366,7 +370,9 @@ private fun ModernCatalogRowItem(
     } else {
         null
     }
+    val homepageTileHeight = LocalHomepageTileHeight.current
     val cardMetrics = remember(
+        homepageTileHeight,
         item,
         useLandscapePosters,
         portraitCatalogCardWidth,
@@ -374,13 +380,16 @@ private fun ModernCatalogRowItem(
         landscapeCatalogCardWidth,
         landscapeCatalogCardHeight
     ) {
-        item.catalogCardMetrics(
+        val base = item.catalogCardMetrics(
             useLandscapePosters = useLandscapePosters,
             portraitCardWidth = portraitCatalogCardWidth,
             portraitCardHeight = portraitCatalogCardHeight,
             landscapeCardWidth = landscapeCatalogCardWidth,
             landscapeCardHeight = landscapeCatalogCardHeight
         )
+        if (homepageTileHeight > 0.dp) {
+            base.copy(width = base.width * (homepageTileHeight / base.height), height = homepageTileHeight)
+        } else base
     }
 
     ModernCarouselCard(
@@ -949,7 +958,7 @@ internal fun ModernRowSection(
                     }
                     .focusGroup(),
                 contentPadding = PaddingValues(horizontal = rowStartPadding),
-                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+                horizontalArrangement = Arrangement.spacedBy(if (LocalHomepageTileStyling.current) 16.dp else NuvioTheme.spacing.md)
             ) {
                 itemsIndexed(
                     items = row.items.list,
@@ -1589,7 +1598,7 @@ private fun ModernCarouselCard(
             }
         }
 
-        if (showLabels && !isBackdropExpanded && item.title.isNotBlank()) {
+        if (showLabels && !(LocalHomepageTileStyling.current && isCollectionFolder) && !isBackdropExpanded && item.title.isNotBlank()) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
