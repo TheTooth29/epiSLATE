@@ -146,6 +146,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           path: app/build/outputs/apk/full/debug/app-full-universal-debug.apk
-          archive: false
+          name: epiSLATE-full-debug-apk
+          archive: true
           if-no-files-found: error
           retention-days: 7
