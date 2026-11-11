@@ -136,7 +136,14 @@ jobs:
               cleanedContent("Issue or approval") || "",
               cleanedContent("Linked issues") || "",
             ].join(" ");
-            if (issueRequired && !hasIssueReference(issueText)) {
+            // Owner-approved work can be documented in the PR when Issues are disabled.
+            const ownerApprovedWithoutIssues =
+              pr.base.repo.has_issues === false &&
+              pr.user.login.toLowerCase() === pr.base.repo.owner.login.toLowerCase() &&
+              checkedLines(sectionContent("Issue or approval")).some((line) =>
+                line.trim() === "- [x] Repository owner approval (Issues disabled)"
+              );
+            if (issueRequired && !hasIssueReference(issueText) && !ownerApprovedWithoutIssues) {
               failedRules.push("Bug fixes and approved changes must link an issue or approved feature request.");
             }
 
