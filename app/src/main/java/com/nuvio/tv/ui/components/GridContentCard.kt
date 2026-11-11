@@ -77,6 +77,7 @@ fun GridContentCard(
     downFocusRequester: FocusRequester? = null,
     depthSurface: CardDepthSurface = CardDepthSurface.POSTERS,
     showReleaseInfo: Boolean = false,
+    collectionGridStyle: Boolean = false,
     onLongPress: (() -> Unit)? = null,
     onFocused: () -> Unit = {}
 ) {
@@ -187,11 +188,11 @@ fun GridContentCard(
             ),
             border = CardDefaults.border(
                 focusedBorder = Border(
-                    border = NuvioTheme.focusRing.border(posterCardStyle.focusedBorderWidth),
+                    border = if (collectionGridStyle) BorderStroke(1.5.dp, Color(0xFF8CCFFF)) else NuvioTheme.focusRing.border(posterCardStyle.focusedBorderWidth),
                     shape = cardShape
                 )
             ),
-            scale = CardDefaults.scale(focusedScale = posterCardStyle.focusedScale)
+            scale = CardDefaults.scale(focusedScale = if (collectionGridStyle) 1.035f else posterCardStyle.focusedScale)
         ) {
             Box(
                 modifier = Modifier
@@ -365,7 +366,7 @@ fun GridContentCard(
                 color = NuvioTheme.colors.TextPrimary,
                 modifier = Modifier
                     .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
-                    .padding(top = NuvioTheme.spacing.sm, start = NuvioTheme.spacing.xxs, end = NuvioTheme.spacing.xxs)
+                    .padding(top = if (collectionGridStyle) 2.dp else NuvioTheme.spacing.sm, start = NuvioTheme.spacing.xxs, end = NuvioTheme.spacing.xxs)
             )
             item.releaseInfo?.takeIf { showReleaseInfo }?.let { info ->
                 FocusMarqueeText(
@@ -375,7 +376,7 @@ fun GridContentCard(
                     color = NuvioTheme.extendedColors.textSecondary,
                     modifier = Modifier
                         .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
-                        .padding(top = 2.dp, start = NuvioTheme.spacing.xxs, end = NuvioTheme.spacing.xxs)
+                        .padding(top = if (collectionGridStyle) 0.dp else 2.dp, start = NuvioTheme.spacing.xxs, end = NuvioTheme.spacing.xxs)
                 )
             }
         }
