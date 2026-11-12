@@ -1,11 +1,12 @@
 name: Setup · Apply Live TV kit
 
 # Upload nuvio-livetv-kit.zip to the root of the repo and this runs automatically.
-# It unzips the kit over the repo, commits the result and removes the zip.
+# If the repo contains a patch instead of the zip, the workflow applies it instead.
 on:
   push:
     paths:
       - "nuvio-livetv-kit.zip"
+      - "nuvio-livetv.patch"
   workflow_dispatch:
 
 permissions:
@@ -18,15 +19,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Unzip kit
+      - name: Apply kit
         run: |
-          if [ ! -f nuvio-livetv-kit.zip ]; then
-            echo "nuvio-livetv-kit.zip not found in the repo root" >&2
+          if [ -f nuvio-livetv-kit.zip ]; then
+            unzip -o nuvio-livetv-kit.zip -x ".github/*" "nuvio-livetv.patch"
+            git rm -q nuvio-livetv-kit.zip || true
+          elif [ -f nuvio-livetv.patch ]; then
+            git apply --whitespace=nowarn nuvio-livetv.patch
+            git rm -q nuvio-livetv.patch || true
+          else
+            echo "nuvio-livetv-kit.zip or nuvio-livetv.patch not found in the repo root" >&2
             exit 1
           fi
-          # Workflow files can't be written by GITHUB_TOKEN, so .github/ is skipped here.
-          unzip -o nuvio-livetv-kit.zip -x ".github/*" "nuvio-livetv.patch"
-          git rm -q nuvio-livetv-kit.zip
           git status --short
 
       - name: Commit
