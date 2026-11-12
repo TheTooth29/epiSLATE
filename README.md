@@ -1,7 +1,3 @@
-# epiSLATE
-
-epiSLATE is an Android TV app based on Nuvio.
-
 <div align="center">
 
 # Nuvio + IPTV
