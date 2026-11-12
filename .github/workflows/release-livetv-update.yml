@@ -1,4 +1,4 @@
-name: Release · Publish IPTV update
+name: Release · Publish epiSLATE update
 
 # Publishes an update of your fork between Nuvio releases, for example after you
 # change Live TV. Run it from the Actions tab. It picks the next version number
@@ -137,7 +137,7 @@ jobs:
           mkdir -p out
           for f in $(find app/build/outputs/apk/full/release -name "*.apk"); do
             name=$(basename "$f" .apk)
-            cp "$f" "out/NuvioPlusIPTV-$VERSION-${name#app-full-}.apk"
+            cp "$f" "out/epiSLATE-$VERSION-${name#app-full-}.apk"
           done
           ls -la out
 
@@ -146,11 +146,11 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.version }}
           target_commitish: ${{ github.sha }}
-          name: Nuvio + IPTV ${{ steps.version.outputs.version }}
+          name: epiSLATE ${{ steps.version.outputs.version }}
           prerelease: true
           files: out/*.apk
           body: |
-            Nuvio + IPTV update ${{ steps.version.outputs.version }}.
+            epiSLATE update ${{ steps.version.outputs.version }}.
 
             ${{ inputs.notes }}
 
@@ -169,8 +169,8 @@ jobs:
           cp "$APK" dl/NuvioPlusIPTV.apk
           if ! gh release view downloader -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release create downloader -R "$GITHUB_REPOSITORY" \
-              --title "Nuvio + IPTV for Downloader (always the newest version)" \
-              --notes "This file is replaced with the newest version every release, so one link (and one Downloader code) always installs the latest Nuvio + IPTV. Updates after that happen inside the app." \
+              --title "epiSLATE for Downloader (always the newest version)" \
+              --notes "This file is replaced with the newest version every release, so one link (and one Downloader code) always installs the latest epiSLATE. Updates after that happen inside the app." \
               --latest=false --prerelease
           fi
           gh release upload downloader dl/NuvioPlusIPTV.apk -R "$GITHUB_REPOSITORY" --clobber
