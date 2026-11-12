@@ -178,7 +178,7 @@ android {
 
         // In-app updater (GitHub Releases)
         buildConfigField("String", "GITHUB_OWNER", "\"TheTooth29\"")
-        buildConfigField("String", "GITHUB_REPO", "\"NuvioPlusIPTV-TimmysFork\"")
+        buildConfigField("String", "GITHUB_REPO", "\"epiSLATE\"")
     }
 
     flavorDimensions += "distribution"
