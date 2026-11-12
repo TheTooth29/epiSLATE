@@ -20,7 +20,7 @@ for key, expected in {"continue_watching": "CONTINUE WATCHING", "upcoming_sectio
 
 require("app/build.gradle.kts",
         'buildConfigField("String", "GITHUB_OWNER", "\\\"TheTooth29\\\"")',
-        'buildConfigField("String", "GITHUB_REPO", "\\\"NuvioPlusIPTV-TimmysFork\\\"")')
+        'buildConfigField("String", "GITHUB_REPO", "\\\"epiSLATE\\\"")')
 require("app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt",
         "val collectionHero = activeCarouselItemState.value?.payload as? ModernPayload.CollectionFolder",
         "!collectionHero.heroBackdropUrl.isNullOrBlank()",
