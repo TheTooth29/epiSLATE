@@ -65,7 +65,7 @@ jobs:
             echo "This fork already includes IPTV release $TAG." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          BRANCH="updates/iptv-${UPSTREAM_SHA:0:12}-${BASE_SHA:0:8}"
+          BRANCH="work/iptv-${UPSTREAM_SHA:0:12}-${BASE_SHA:0:8}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -c "$BRANCH"
