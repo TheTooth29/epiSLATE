@@ -1,8 +1,5 @@
 name: Setup · Apply Live TV kit
 
-# Upload nuvio-livetv-kit.zip to the root of the repo and this runs automatically.
-# If the repo contains a patch instead of the zip, the workflow applies it instead.
-# This version is idempotent: it skips if the patch is already present.
 on:
   push:
     paths:
@@ -22,7 +19,12 @@ jobs:
 
       - name: Apply kit
         run: |
-          if [ -f nuvio-livetv-kit.zip ]; then
+          if [ -f .github/workflows/livetv-build.yml ] \
+            && [ -f app/build.gradle.kts ] \
+            && [ -d app/src/main/java/com/nuvio/tv/livetv ] \
+            && [ -d app/src/main/res/layout ]; then
+            echo "Live TV files already present; skipping patch application"
+          elif [ -f nuvio-livetv-kit.zip ]; then
             unzip -o nuvio-livetv-kit.zip -x ".github/*" "nuvio-livetv.patch"
             git rm -q nuvio-livetv-kit.zip || true
           elif [ -f nuvio-livetv.patch ]; then
