@@ -445,7 +445,7 @@ internal fun ModernHomeRowsList(
                     row = row,
                     isActiveRow = isActiveRowLambda,
                     rowFocusRequester = rowFocusRequesters.getOrPut(row.key) { FocusRequester() },
-                    rowTitleBottom = if (LocalHomepageTileStyling.current) 10.dp else 14.dp,
+                    rowTitleBottom = if (LocalHomepageTileStyling.current) 6.dp else 14.dp,
                     defaultBringIntoViewSpec = defaultBringIntoViewSpec,
                     focusStateCatalogRowScrollIndex = focusState.catalogRowScrollStates[row.key] ?: 0,
                     focusStateCatalogRowScrollAnchor = focusState.catalogRowScrollAnchors[row.key],
