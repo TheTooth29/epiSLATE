@@ -750,6 +750,14 @@ internal fun ModernRowSection(
                         .size(width = widthPx, height = heightPx)
                         .apply {
                             if (blur) transformations(com.nuvio.tv.ui.util.BlurTransformation())
+                            if (payload is ModernPayload.CollectionFolder) {
+                                val original = item.imageUrl ?: item.heroPreview.poster ?: item.heroPreview.backdrop
+                                if (!original.isNullOrBlank() && original != url) {
+                                    memoryCacheKeyExtras(mapOf(
+                                        com.nuvio.tv.core.image.CustomPosterFallbackInterceptor.FALLBACK_URL_KEY to original
+                                    ))
+                                }
+                            }
                         }
                         .build()
                 )
