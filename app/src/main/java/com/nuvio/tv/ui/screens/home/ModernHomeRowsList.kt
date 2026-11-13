@@ -29,6 +29,8 @@ import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
@@ -292,6 +294,17 @@ internal fun ModernHomeRowsList(
                 .height(rowsViewportHeight)
                 .padding(bottom = catalogBottomPadding)
                 .clipToBounds()
+                .then(if (rowsOnlyHomepage) Modifier.drawWithContent {
+                    // Do not reveal a partial fourth row below the three-row homepage.
+                    // Keep normal list measurement/focus scrolling so the next row can
+                    // still be selected and brought into view with the remote.
+                    val rows = verticalRowListState.layoutInfo.visibleItemsInfo
+                    val firstFullRow = rows.firstOrNull { it.offset >= 0 }
+                    val fourthRow = firstFullRow?.let { first -> rows.firstOrNull { it.index == first.index + 3 } }
+                    val bottom = fourthRow?.let { it.offset.toFloat() - 16.dp.toPx() }
+                        ?.coerceIn(0f, size.height) ?: size.height
+                    clipRect(bottom = bottom) { this@drawWithContent.drawContent() }
+                } else Modifier)
                 .graphicsLayer { alpha = trailerContentAlpha() }
                 .focusRequester(contentFocusRequester)
                 .focusRestorer { focusRestorerRequester() }

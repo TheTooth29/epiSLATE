@@ -718,20 +718,25 @@ fun ModernHomeContent(
                     delay(60_000L - now % 60_000L)
                 }
             }
+            val wordmarkWidth = 126.72.dp
+            val wordmarkHeight = wordmarkWidth * (44f / 200f)
+            val clockSlateOffset = wordmarkHeight * (18f / 44f - 0.5f)
             androidx.compose.foundation.layout.Row(
                 modifier = Modifier.align(Alignment.TopEnd)
-                    .padding(top = 10.dp, end = 32.dp)
+                    .padding(top = 8.dp, end = 32.dp)
                     .zIndex(2f),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 androidx.compose.foundation.Image(
                     painter = androidx.compose.ui.res.painterResource(com.nuvio.tv.R.drawable.epislate_wordmark),
                     contentDescription = "epiSLATE",
-                    modifier = Modifier.size(width = 126.72.dp, height = 92.16.dp)
+                    // Use the vector's 200:44 aspect ratio, without a tall empty box.
+                    modifier = Modifier.size(width = wordmarkWidth, height = wordmarkHeight)
                 )
                 Text(
                     text = clock.value,
-                    modifier = Modifier.padding(start = 12.dp),
+                    // SLATE capitals are centered at viewport y=18, not the box's y=22.
+                    modifier = Modifier.padding(start = 12.dp).offset(y = clockSlateOffset),
                     color = NuvioTheme.colors.TextPrimary,
                     fontSize = 14.sp
                 )
@@ -1071,9 +1076,9 @@ fun ModernHomeContent(
 
             val localDensity = LocalDensity.current
             // Only the root homepage uses the compact rows-only layout.
-            val rowsViewportHeightFraction = if (rowsOnlyHomepage) 0.90f else if (useLandscapePosters) 0.49f else 0.52f
+            val rowsViewportHeightFraction = if (rowsOnlyHomepage) 0.94f else if (useLandscapePosters) 0.49f else 0.52f
             val rowsViewportHeight = remember(screenHeight, rowsViewportHeightFraction) { screenHeight * rowsViewportHeightFraction }
-            val rowTitleLineHeight = MaterialTheme.typography.titleMedium.lineHeight
+            val rowTitleLineHeight = if (rowsOnlyHomepage) 19.sp else MaterialTheme.typography.titleMedium.lineHeight
             val rowTitleHeight = remember(rowTitleLineHeight, localDensity) {
                 with(localDensity) {
                     runCatching { rowTitleLineHeight.toDp() }
@@ -1081,8 +1086,11 @@ fun ModernHomeContent(
                 }
             }
             val heroBackdropHeight = remember(screenHeight, rowsViewportHeight, rowTitleHeight) { (screenHeight - rowsViewportHeight + rowTitleHeight + 14.dp).coerceAtMost(screenHeight) }
-            val verticalRowBringIntoViewSpec = remember(localDensity, defaultBringIntoViewSpec) {
-                val topInsetPx = with(localDensity) { MODERN_ROW_HEADER_FOCUS_INSET.toPx() }
+            val verticalRowBringIntoViewSpec = remember(localDensity, defaultBringIntoViewSpec, rowsOnlyHomepage, rowTitleHeight) {
+                // Align the focused card below its actual heading so the previous row
+                // remains outside the clipped viewport after the heading was compacted.
+                val topInset = if (rowsOnlyHomepage) rowTitleHeight + 6.dp else MODERN_ROW_HEADER_FOCUS_INSET
+                val topInsetPx = with(localDensity) { topInset.toPx() }
                 @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
                 object : BringIntoViewSpec {
                     override val scrollAnimationSpec: AnimationSpec<Float> = defaultBringIntoViewSpec.scrollAnimationSpec
