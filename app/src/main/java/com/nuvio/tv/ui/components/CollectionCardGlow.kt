@@ -18,6 +18,7 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.CardGlow
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Glow
+import com.nuvio.tv.core.image.collectionCoverPreviewUrl
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
@@ -67,7 +68,7 @@ fun rememberArtworkBackedFocusGlow(
 
         glowColor = withContext(Dispatchers.IO) {
             val request = ImageRequest.Builder(context)
-                .data(imageUrl)
+                .data(collectionCoverPreviewUrl(imageUrl))
                 .allowHardware(false)
                 .size(coil3.size.Size(96, 96))
                 .build()
