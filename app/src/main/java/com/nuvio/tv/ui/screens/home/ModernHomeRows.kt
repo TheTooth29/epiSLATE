@@ -100,6 +100,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.nuvio.tv.core.image.collectionCoverPreviewUrl
+import com.nuvio.tv.core.image.collectionCoverCacheKey
 import coil3.compose.AsyncImage
 import coil3.imageLoader
 import coil3.memory.MemoryCache
@@ -704,7 +706,8 @@ internal fun ModernRowSection(
                         url to "${url}_${widthPx}x${heightPx}"
                     }
                     is ModernPayload.CollectionFolder -> {
-                        val url = item.imageUrl ?: return null
+                        val url = (item.imageUrl ?: item.heroPreview.poster ?: item.heroPreview.backdrop)
+                            ?.let(::collectionCoverPreviewUrl) ?: return null
                         val metrics = item.catalogCardMetrics(
                             useLandscapePosters = useLandscapePosters,
                             portraitCardWidth = portraitCatalogCardWidth,
@@ -714,7 +717,7 @@ internal fun ModernRowSection(
                         )
                         val widthPx = with(density) { metrics.width.roundToPx() }
                         val heightPx = with(density) { metrics.height.roundToPx() }
-                        url to "${url}_${widthPx}x${heightPx}"
+                        url to collectionCoverCacheKey(url, widthPx, heightPx)
                     }
                     is ModernPayload.ContinueWatching -> {
                         // Use the same model and cache key the card computes so the prefetch warms the entry the card actually reads.
@@ -747,14 +750,24 @@ internal fun ModernRowSection(
                         .size(width = widthPx, height = heightPx)
                         .apply {
                             if (blur) transformations(com.nuvio.tv.ui.util.BlurTransformation())
+                            if (payload is ModernPayload.CollectionFolder) {
+                                val original = item.imageUrl ?: item.heroPreview.poster ?: item.heroPreview.backdrop
+                                if (!original.isNullOrBlank() && original != url) {
+                                    memoryCacheKeyExtras(mapOf(
+                                        com.nuvio.tv.core.image.CustomPosterFallbackInterceptor.FALLBACK_URL_KEY to original
+                                    ))
+                                }
+                            }
                         }
                         .build()
                 )
             }
             // Prefetch initial visible + ahead items immediately when row appears
             val items = currentRowState.value.items.list
+            val prefetchDistance = if (items.firstOrNull()?.payload is ModernPayload.CollectionFolder) 4
+                else POSTER_PREFETCH_DISTANCE
             withContext(Dispatchers.IO) {
-                for (i in 0 until minOf(POSTER_PREFETCH_DISTANCE, items.size)) {
+                for (i in 0 until minOf(prefetchDistance, items.size)) {
                     val item = items.getOrNull(i) ?: continue
                     val (wPx, hPx) = when (item.payload) {
                         is ModernPayload.Catalog -> {
@@ -790,7 +803,7 @@ internal fun ModernRowSection(
                 .collect { lastVisibleIndex ->
                     val currentItems = currentRowState.value.items.list
                     withContext(Dispatchers.IO) {
-                        for (i in (lastVisibleIndex + 1)..(lastVisibleIndex + POSTER_PREFETCH_DISTANCE)) {
+                        for (i in (lastVisibleIndex + 1)..(lastVisibleIndex + prefetchDistance)) {
                             val item = currentItems.getOrNull(i) ?: continue
                             val (wPx, hPx) = when (item.payload) {
                                 is ModernPayload.Catalog -> {
@@ -1215,7 +1228,9 @@ private fun ModernCarouselCard(
     } else {
         item.imageUrl ?: item.heroPreview.poster ?: item.heroPreview.backdrop
     }
-    val genrePreviewUrl = if (isCollectionFolder) baseImageUrl?.let(::genreTilePreviewUrl) else null
+    val genrePreviewUrl = if (isCollectionFolder) {
+        baseImageUrl?.let(::collectionCoverPreviewUrl)?.takeIf { it != baseImageUrl }
+    } else null
     val imageUrl = genrePreviewUrl ?: baseImageUrl
     val genreTileId = payload?.takeIf {
         genrePreviewUrl != null || it.collectionTitle.contains("genre", ignoreCase = true)
@@ -1257,7 +1272,8 @@ private fun ModernCarouselCard(
             val builder = ImageRequest.Builder(context)
                 .data(it)
                 .crossfade(true)
-                .memoryCacheKey("${it}_${requestWidthPx}x${requestHeightPx}_v$revalidationKey")
+                .memoryCacheKey(if (isCollectionFolder) collectionCoverCacheKey(it, requestWidthPx, requestHeightPx, revalidationKey)
+                    else "${it}_${requestWidthPx}x${requestHeightPx}_v$revalidationKey")
                 .size(width = requestWidthPx, height = requestHeightPx)
             if (revalidationKey > 0) {
                 builder.placeholderMemoryCacheKey("${it}_${requestWidthPx}x${requestHeightPx}_v${revalidationKey - 1}")
@@ -1673,17 +1689,4 @@ private class AnimatedWidthNode(var width: State<Dp>) : LayoutModifierNode, Modi
 
     override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurable: IntrinsicMeasurable, width: Int) =
         measurable.maxIntrinsicHeight(width)
-}
-
-private const val GENRE_COVER_BASE = "https://raw.githubusercontent.com/TheTooth29/epiSLATE-assets/main/collections/genres/cover/"
-
-private val genreTilePreviewNames = setOf(
-    "action", "adventure", "animation", "comedy", "crime", "documentary", "drama", "family", "fantasy",
-    "history", "horror", "music", "mystery", "romance", "scifi", "thriller", "war", "western"
-)
-
-private fun genreTilePreviewUrl(coverUrl: String): String? {
-    if (!coverUrl.startsWith(GENRE_COVER_BASE) || !coverUrl.endsWith(".png")) return null
-    val name = coverUrl.removePrefix(GENRE_COVER_BASE).removeSuffix(".png")
-    return if (name in genreTilePreviewNames) "$GENRE_COVER_BASE$name.jpg" else null
 }

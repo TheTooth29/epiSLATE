@@ -142,7 +142,7 @@ jobs:
           done
 
       - name: Test updater and build signed epiSLATE Test APK
-        run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' --tests 'com.nuvio.tv.ui.screens.home.HomeRowVisibilityTest' :app:assembleFullRelease --stacktrace -PlivetvTestBuild=true -PlivetvBuildNumber=2
+        run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' --tests 'com.nuvio.tv.ui.screens.home.HomeRowVisibilityTest' --tests 'com.nuvio.tv.domain.model.CollectionOrderingTest' --tests 'com.nuvio.tv.core.image.CollectionCoverPreviewTest' :app:assembleFullRelease --stacktrace -PlivetvTestBuild=true -PlivetvBuildNumber=2
 
       - name: Name epiSLATE test APK
         run: |

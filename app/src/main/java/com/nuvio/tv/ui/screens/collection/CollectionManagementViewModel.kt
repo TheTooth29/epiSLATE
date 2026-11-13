@@ -8,6 +8,7 @@ import com.nuvio.tv.core.sync.CollectionSyncService
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.ValidationResult
 import com.nuvio.tv.domain.model.Collection
+import com.nuvio.tv.domain.model.mergeCollectionImport
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -133,17 +134,9 @@ class CollectionManagementViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            val current = _uiState.value.collections.toMutableList()
-            val existingIds = current.map { it.id }.toSet()
-            for (collection in imported) {
-                if (collection.id in existingIds) {
-                    val index = current.indexOfFirst { it.id == collection.id }
-                    if (index >= 0) current[index] = collection
-                } else {
-                    current.add(collection)
-                }
-            }
-            collectionsDataStore.setCollections(current)
+            collectionsDataStore.setCollections(
+                mergeCollectionImport(_uiState.value.collections, imported)
+            )
             collectionSyncService.triggerPush()
             _uiState.update { it.copy(showImportDialog = false, importText = "", importError = null) }
         }
@@ -241,17 +234,9 @@ class CollectionManagementViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            val current = _uiState.value.collections.toMutableList()
-            val existingIds = current.map { it.id }.toSet()
-            for (collection in imported) {
-                if (collection.id in existingIds) {
-                    val index = current.indexOfFirst { it.id == collection.id }
-                    if (index >= 0) current[index] = collection
-                } else {
-                    current.add(collection)
-                }
-            }
-            collectionsDataStore.setCollections(current)
+            collectionsDataStore.setCollections(
+                mergeCollectionImport(_uiState.value.collections, imported)
+            )
             collectionSyncService.triggerPush()
             _uiState.update {
                 it.copy(
