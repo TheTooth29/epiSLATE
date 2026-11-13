@@ -11,6 +11,10 @@ import androidx.tv.material3.Typography
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.AppFont
 
+val BarlowCondensedLightFamily = FontFamily(
+    Font(R.font.barlow_condensed_light, FontWeight.Light)
+)
+
 val DMSansFamily = FontFamily(
     Font(R.font.dm_sans_variable, FontWeight.Normal),
     Font(R.font.dm_sans_variable, FontWeight.Medium),

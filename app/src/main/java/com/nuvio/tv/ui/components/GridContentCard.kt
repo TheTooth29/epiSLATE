@@ -1,6 +1,8 @@
 package com.nuvio.tv.ui.components
 
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.theme.BarlowCondensedLightFamily
+import androidx.compose.ui.text.font.FontWeight
 
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.animation.core.tween
@@ -80,6 +82,7 @@ fun GridContentCard(
     onLongPress: (() -> Unit)? = null,
     showYearOnly: Boolean = false,
     yearLabelOverride: String? = null,
+    subtleReleaseDate: Boolean = false,
     onFocused: () -> Unit = {}
 ) {
     val cardShape = remember(posterCardStyle.cornerRadius) { RoundedCornerShape(posterCardStyle.cornerRadius) }
@@ -376,6 +379,14 @@ fun GridContentCard(
         } else {
             item.releaseInfo?.takeIf { showReleaseInfo && showTitle }
         }
+        val releaseLabelStyle = if (subtleReleaseDate) {
+            MaterialTheme.typography.labelMedium.copy(
+                fontFamily = BarlowCondensedLightFamily,
+                fontWeight = FontWeight.Light
+            )
+        } else MaterialTheme.typography.labelMedium
+        val releaseLabelColor = if (subtleReleaseDate) Color.White.copy(alpha = 0.35f)
+            else NuvioTheme.extendedColors.textSecondary
         releaseLabel?.let { info ->
             val labelModifier = Modifier
                 .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
@@ -383,8 +394,8 @@ fun GridContentCard(
             if (showYearOnly) {
                 Text(
                     text = info,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = NuvioTheme.extendedColors.textSecondary,
+                    style = releaseLabelStyle,
+                    color = releaseLabelColor,
                     textAlign = TextAlign.Center,
                     modifier = labelModifier
                 )
@@ -392,8 +403,8 @@ fun GridContentCard(
                 FocusMarqueeText(
                     text = info,
                     focused = isFocused,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = NuvioTheme.extendedColors.textSecondary,
+                    style = releaseLabelStyle,
+                    color = releaseLabelColor,
                     modifier = labelModifier
                 )
             }

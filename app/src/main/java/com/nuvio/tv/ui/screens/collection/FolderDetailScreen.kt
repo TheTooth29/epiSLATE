@@ -299,41 +299,16 @@ private fun TabbedGridContent(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
     ) {
-        if (!folder.coverImageUrl.isNullOrBlank()) {
-            val iconWidth: androidx.compose.ui.unit.Dp
-            val iconHeight: androidx.compose.ui.unit.Dp
-            when (folder.tileShape) {
-                com.nuvio.tv.domain.model.PosterShape.POSTER -> { iconWidth = NuvioTheme.spacing.xxl; iconHeight = NuvioTheme.spacing.xxxl }
-                com.nuvio.tv.domain.model.PosterShape.LANDSCAPE -> { iconWidth = 64.dp; iconHeight = 36.dp }
-                com.nuvio.tv.domain.model.PosterShape.SQUARE -> { iconWidth = NuvioTheme.spacing.xxxl; iconHeight = NuvioTheme.spacing.xxxl }
-            }
-            AsyncImage(
-                model = folder.coverImageUrl,
-                contentDescription = folder.title,
-                modifier = Modifier
-                    .width(iconWidth)
-                    .height(iconHeight)
-                    .clip(RoundedCornerShape(NuvioTheme.radii.sm)),
-                contentScale = ContentScale.FillBounds
-            )
-        } else if (!folder.coverEmoji.isNullOrBlank()) {
-            Text(
-                text = folder.coverEmoji,
-                style = MaterialTheme.typography.headlineLarge
-            )
-        }
-        if (folder.coverImageUrl.isNullOrBlank()) {
-            Text(
-                text = folder.title,
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    textDirection = folder.title.contentTextDirection()
-                ),
-                color = NuvioTheme.colors.TextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = 300.dp)
-            )
-        }
+        Text(
+            text = folder.title,
+            style = MaterialTheme.typography.headlineMedium.copy(
+                textDirection = folder.title.contentTextDirection()
+            ),
+            color = NuvioTheme.colors.TextPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = 300.dp)
+        )
 
         if (uiState.tabs.size > 1) {
             TabRow(
@@ -508,7 +483,8 @@ private fun TabbedGridContent(
                     }
                     GridContentCard(
                         item = item,
-                        yearLabelOverride = digitalDate,
+                        yearLabelOverride = if (item.apiType == "series") formatGridReleaseDate(item.released) else digitalDate,
+                        subtleReleaseDate = true,
                         posterCardStyle = posterCardStyle,
                         focusRequester = focusReq,
                         isWatched = isItemWatched(item),
