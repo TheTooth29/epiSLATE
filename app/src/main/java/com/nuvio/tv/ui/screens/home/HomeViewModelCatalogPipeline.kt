@@ -8,8 +8,8 @@ import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.Collection
+import com.nuvio.tv.domain.model.collectionsForHome
 import com.nuvio.tv.domain.model.HomeLayout
-import com.nuvio.tv.domain.model.catalogRowStableKey
 import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.model.legacyKey
 import com.nuvio.tv.domain.model.mergeCatalogPage
@@ -28,7 +28,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import com.nuvio.tv.domain.model.MetaPreview
-import com.nuvio.tv.domain.model.PLACEHOLDER_IMAGE_URL
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withPermit
 import com.nuvio.tv.core.util.filterReleasedItems
@@ -717,89 +716,12 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
     heroItemOrder = baseHeroItems.map { it.id }
 
     val (computedHomeRows, nextGridItems) = withContext(Dispatchers.Default) {
-        val computedHomeRows = buildList {
-            val displayRowsByKey = displayRows.associateBy { it.legacyKey() }
-            // Build a lookup of placeholder descriptors by key for lazy catalogs
-            val placeholdersByKey = synchronized(catalogStateLock) {
-                placeholderDescriptors.associateBy { it.catalogKey }
-            }
-            val addedCollectionIds = mutableSetOf<String>()
-            collectionsCache.forEach { collection ->
-                val key = "collection_${collection.id}"
-            if (collection.pinToTop && key !in disabledHomeCatalogKeys && addedCollectionIds.add(collection.id)) {
-                add(HomeRow.CollectionRow(collection))
-            }
-        }
-        for (key in orderedKeys) {
-            if (key in disabledHomeCatalogKeys) continue
-            // Home shows Collections only. Keep catalog loading, storage and source
-            // resolution intact so every addon (including future catalogs) remains
-            // available to Collection folders without creating a standalone row.
-            if (key !in collectionsSnapshot) continue
-            val collectionEntry = collectionsSnapshot[key]
-            if (collectionEntry != null) {
-                if (!collectionEntry.pinToTop && addedCollectionIds.add(collectionEntry.id)) {
-                    add(HomeRow.CollectionRow(collectionEntry))
-                }
-            } else {
-                    val catalogRow = displayRowsByKey[key]
-                    if (catalogRow != null && catalogRow.items.isNotEmpty()) {
-                        add(HomeRow.Catalog(catalogRow))
-                    } else {
-                        val placeholder = placeholdersByKey[key]
-                        if (placeholder != null) {
-                        if (currentLayout == HomeLayout.MODERN) {
-                            add(HomeRow.PlaceholderCatalog(
-                                catalogKey = placeholder.catalogKey,
-                                stableCatalogKey = catalogRowStableKey(
-                                    placeholder.addonId,
-                                    placeholder.addonBaseUrl,
-                                    placeholder.apiType,
-                                    placeholder.catalogId
-                                ),
-                                addonId = placeholder.addonId,
-                                addonName = placeholder.addonName,
-                                addonBaseUrl = placeholder.addonBaseUrl,
-                                catalogId = placeholder.catalogId,
-                                catalogName = placeholder.catalogName,
-                                apiType = placeholder.apiType,
-                                displayTitle = placeholder.displayTitle
-                            ))
-                        } else {
-                            val fakeItems = (0 until 8).map { i ->
-                                MetaPreview(
-                                    id = "__placeholder_${placeholder.catalogKey}_$i",
-                                    type = com.nuvio.tv.domain.model.ContentType.fromString(placeholder.apiType),
-                                    rawType = placeholder.apiType,
-                                    name = " ",
-                                    poster = PLACEHOLDER_IMAGE_URL,
-                                    posterShape = com.nuvio.tv.domain.model.PosterShape.POSTER,
-                                    background = null,
-                                    logo = null,
-                                    description = null,
-                                    releaseInfo = " ",
-                                    imdbRating = null,
-                                    genres = emptyList()
-                                )
-                            }
-                            add(HomeRow.Catalog(CatalogRow(
-                                addonId = placeholder.addonId,
-                                addonName = placeholder.addonName,
-                                addonBaseUrl = placeholder.addonBaseUrl,
-                                catalogId = placeholder.catalogId,
-                                catalogName = placeholder.catalogName,
-                                type = com.nuvio.tv.domain.model.ContentType.fromString(placeholder.apiType),
-                                rawType = placeholder.apiType,
-                                items = fakeItems,
-                                isLoading = true,
-                                hasMore = false
-                            )))
-                        }
-                    }
-                }
-            }
-        }
-    }
+        // Follow the same list shown in Collections setup, not stale saved
+        // addon-layout collection slots. Collection source/catalog loading stays intact.
+        val computedHomeRows: List<HomeRow> = collectionsForHome(
+            collectionsSnapshot.values.toList(),
+            disabledHomeCatalogKeys
+        ).map { HomeRow.CollectionRow(it) }
 
     val nextGridItems = if (currentLayout == HomeLayout.GRID) {
         val posterCardWidthDp = _uiState.value.posterCardWidthDp
