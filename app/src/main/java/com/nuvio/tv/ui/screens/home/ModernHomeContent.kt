@@ -727,11 +727,11 @@ fun ModernHomeContent(
                 androidx.compose.foundation.Image(
                     painter = androidx.compose.ui.res.painterResource(com.nuvio.tv.R.drawable.epislate_wordmark),
                     contentDescription = "epiSLATE",
-                    modifier = Modifier.size(width = 105.6.dp, height = 76.8.dp)
+                    modifier = Modifier.size(width = 126.72.dp, height = 92.16.dp)
                 )
                 Text(
                     text = clock.value,
-                    modifier = Modifier.padding(start = 12.dp).offset(y = (-2).dp),
+                    modifier = Modifier.padding(start = 12.dp),
                     color = NuvioTheme.colors.TextPrimary,
                     fontSize = 14.sp
                 )
