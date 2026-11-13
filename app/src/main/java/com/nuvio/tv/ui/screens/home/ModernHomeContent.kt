@@ -723,7 +723,7 @@ fun ModernHomeContent(
             val clockSlateOffset = wordmarkHeight * (18f / 44f - 0.5f)
             androidx.compose.foundation.layout.Row(
                 modifier = Modifier.align(Alignment.TopEnd)
-                    .padding(top = 8.dp, end = 32.dp)
+                    .padding(top = 12.dp, end = 32.dp)
                     .zIndex(2f),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1076,7 +1076,7 @@ fun ModernHomeContent(
 
             val localDensity = LocalDensity.current
             // Only the root homepage uses the compact rows-only layout.
-            val rowsViewportHeightFraction = if (rowsOnlyHomepage) 0.94f else if (useLandscapePosters) 0.49f else 0.52f
+            val rowsViewportHeightFraction = if (rowsOnlyHomepage) 0.92f else if (useLandscapePosters) 0.49f else 0.52f
             val rowsViewportHeight = remember(screenHeight, rowsViewportHeightFraction) { screenHeight * rowsViewportHeightFraction }
             val rowTitleLineHeight = if (rowsOnlyHomepage) 19.sp else MaterialTheme.typography.titleMedium.lineHeight
             val rowTitleHeight = remember(rowTitleLineHeight, localDensity) {
