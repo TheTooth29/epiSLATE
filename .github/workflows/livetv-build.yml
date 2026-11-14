@@ -125,7 +125,10 @@ jobs:
       - name: Collect APKs
         run: |
           mkdir -p out
-          find app/build/outputs/apk/full/release -name "*.apk" -exec cp {} out/ \;
+          for apk in app/build/outputs/apk/full/release/*.apk; do
+            filename=$(basename "$apk")
+            cp "$apk" "out/epiSLATE-1.0.0-beta.1-${filename#app-full-}"
+          done
           ls -la out
 
       # Test build: the single APK as it is (no zip to open), named so it's easy to spot.
@@ -225,4 +228,15 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: out/*.apk
-          generate_release_notes: true
+          name: epiSLATE Beta
+          prerelease: true
+          make_latest: false
+          body: |
+            ## epiSLATE Beta
+            Version: **1.0.0-beta.1**
+
+            First epiSLATE beta for testing on Android TV and Google TV.
+            Includes the tested homepage spacing, logo and clock alignment, dimmed row headings and dates, and cleaner category headers.
+
+            Download the **universal** APK below if you are unsure which version to install.
+            This beta has no trial expiration or activation requirement.

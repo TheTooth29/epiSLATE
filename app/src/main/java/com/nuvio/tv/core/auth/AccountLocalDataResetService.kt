@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.nuvio.tv.core.sync.androidtv.AndroidTvChannelManager
 import com.nuvio.tv.core.profile.ProfileScopedCredentialStore
+import com.nuvio.tv.data.local.AppOnboardingDataStore
 import com.nuvio.tv.data.local.ProfileDataStore
 import com.nuvio.tv.data.local.ProfileDataStoreFactory
 import com.nuvio.tv.data.local.ProfileLockStateDataStore
@@ -21,6 +22,7 @@ class AccountLocalDataResetService @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val profileDataStoreFactory: ProfileDataStoreFactory,
     private val profileDataStore: ProfileDataStore,
+    private val appOnboardingDataStore: AppOnboardingDataStore,
     private val profileLockStateDataStore: ProfileLockStateDataStore,
     private val credentialStores: Set<@JvmSuppressWildcards ProfileScopedCredentialStore>,
     private val androidTvChannelManager: AndroidTvChannelManager
@@ -38,6 +40,8 @@ class AccountLocalDataResetService @Inject constructor(
             .onFailure { Log.w(ACCOUNT_RESET_TAG, "Failed to clear profile credentials", it) }
         runCatching { clearAccountFiles() }
             .onFailure { Log.w(ACCOUNT_RESET_TAG, "Failed to clear account files", it) }
+        // Account setup was cleared too: return to sign-in rather than layout setup.
+        appOnboardingDataStore.setHasSeenAuthQrOnFirstLaunch(false)
     }
 
     private fun clearAccountFiles() {

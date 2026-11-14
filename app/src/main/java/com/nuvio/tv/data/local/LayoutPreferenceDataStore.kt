@@ -226,7 +226,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     val sidebarCollapsedByDefault: Flow<Boolean> = profileFlow { prefs ->
-        prefs[sidebarCollapsedKey] ?: false
+        prefs[sidebarCollapsedKey] ?: true
     }
 
     val modernSidebarEnabled: Flow<Boolean> = profileFlow { prefs ->
