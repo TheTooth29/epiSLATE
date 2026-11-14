@@ -127,7 +127,7 @@ jobs:
           mkdir -p out
           for apk in app/build/outputs/apk/full/release/*.apk; do
             filename=$(basename "$apk")
-            cp "$apk" "out/epiSLATE-1.0.0-beta.1-${filename#app-full-}"
+            cp "$apk" "out/epiSLATE-1.0.0-beta.2-${filename#app-full-}"
           done
           ls -la out
 
@@ -233,10 +233,10 @@ jobs:
           make_latest: false
           body: |
             ## epiSLATE Beta
-            Version: **1.0.0-beta.1**
+            Version: **1.0.0-beta.2**
 
-            First epiSLATE beta for testing on Android TV and Google TV.
-            Includes the tested homepage spacing, logo and clock alignment, dimmed row headings and dates, and cleaner category headers.
+            Second epiSLATE beta for Android TV and Google TV.
+            Fixes sign-out returning to QR login and reopening afterward, defaults new profiles to a collapsed sidebar, capitalizes full dates in Tabbed Grid, and hides outgoing row slivers during homepage scrolling. All four fixes passed owner TV testing.
 
             Download the **universal** APK below if you are unsure which version to install.
             This beta has no trial expiration or activation requirement.

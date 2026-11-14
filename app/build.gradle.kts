@@ -384,9 +384,9 @@ android.defaultConfig.buildConfigField(
     "String", "NUVIO_BASE_VERSION", "\"${android.defaultConfig.versionName ?: ""}\""
 )
 
-val livetvBuildNumber = (findProperty("livetvBuildNumber") as String?)?.toIntOrNull() ?: 4
+val livetvBuildNumber = (findProperty("livetvBuildNumber") as String?)?.toIntOrNull() ?: 5
 android.defaultConfig.versionCode = (android.defaultConfig.versionCode ?: 1) * 100 + livetvBuildNumber
-((findProperty("livetvVersionName") as String?) ?: "1.0.0-beta.1").takeIf { it.isNotBlank() }?.let {
+((findProperty("livetvVersionName") as String?) ?: "1.0.0-beta.2").takeIf { it.isNotBlank() }?.let {
     android.defaultConfig.versionName = it
 }
 
