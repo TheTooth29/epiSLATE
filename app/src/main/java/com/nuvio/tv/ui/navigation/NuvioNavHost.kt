@@ -383,7 +383,7 @@ private fun PlaybackNavHost(
             val detailArgs = backStackEntry.arguments
             if (ServerCatalog.isCollection(detailArgs?.getString("itemId"), detailArgs?.getString("itemType"))) {
                 ServerCatalogDestination(navController, backStackEntry)
-                return@composable
+                return@trialComposable
             }
             val savedState = backStackEntry.savedStateHandle
             val returnToHomeOnBack = detailArgs
@@ -1702,7 +1702,7 @@ private fun PlaybackNavHost(
             val fromSearch = backStackEntry.arguments?.getBoolean("fromSearch") ?: false
             if (ServerCatalog.isServerAddonId(addonId) && !fromSearch) {
                 ServerCatalogDestination(navController, backStackEntry)
-                return@composable
+                return@trialComposable
             }
 
             // When coming from search, get the SearchViewModel from the Search back stack entry
