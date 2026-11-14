@@ -548,11 +548,11 @@ internal fun ModernRowSection(
         val homepageStyling = LocalHomepageTileStyling.current
         val rowTitleStyle = remember(titleMediumStyle, homepageStyling) {
             if (homepageStyling) titleMediumStyle.copy(
-                fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 22.sp
+                fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 19.sp
             ) else titleMediumStyle.copy(fontWeight = FontWeight.SemiBold)
         }
         val rowTitle = row.title
-        val textColor = NuvioTheme.colors.TextPrimary
+        val textColor = if (homepageStyling) Color.White.copy(alpha = 0.70f) else NuvioTheme.colors.TextPrimary
         val textModifier = remember(rowTitleBottom) {
             Modifier.padding(start = 52.dp, bottom = rowTitleBottom)
         }
