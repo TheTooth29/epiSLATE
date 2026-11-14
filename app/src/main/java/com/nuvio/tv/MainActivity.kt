@@ -283,7 +283,7 @@ private data class MainUiPrefs(
     val experienceMode: ExperienceMode? = null,
     val experienceModeLoaded: Boolean = false,
     val addonSetupSkipped: Boolean = false,
-    val sidebarCollapsed: Boolean = false,
+    val sidebarCollapsed: Boolean = true,
     val modernSidebarEnabled: Boolean = false,
     val modernSidebarBlurPref: Boolean = false,
     val discoverLocation: DiscoverLocation? = null,
