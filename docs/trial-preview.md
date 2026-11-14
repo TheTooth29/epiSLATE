@@ -29,3 +29,8 @@ Validation: run the trial unit tests with the trial build flag, then device-test
 The complete app compilation was intentionally cancelled after it put excessive memory pressure on the local computer. The isolated compile is not full integration verification. No APK was assembled, no remote build was dispatched, and no emulator/device acceptance test was performed. Full app compilation and Android remote/focus, playback, recording, Settings relock, and side-by-side-installation checks remain required before distribution.
 
 The normal beta configuration and merged manifest were also generated and verified: original package, version, all 12 launcher labels, provider authority, updates enabled, and trial enforcement disabled. No APK was assembled by these configuration checks.
+
+## Trial CI artifact
+
+The trial branch incorporates dev through a717f8e (TV-tested feedback fixes, PR #22).
+Pushing work/trial-activation runs .github/workflows/trial-preview-build.yml. It runs the trial and account-reset tests, builds a signed full-release APK with epislateTrial=true, verifies the actual universal APK identity/label/signature and enabled activation configuration, and uploads a distinctly named epiSLATE-Trial artifact for seven days. It has read-only repository permissions and no release-publishing or Drive-upload step. The standard beta build workflow is unchanged. The owner monitors the run; device acceptance testing still follows the build.
