@@ -77,14 +77,7 @@ fun TrialAppGate(onExit: () -> Unit, content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalSettingsVisit provides settingsVisit) {
         when {
             snapshot.status == TrialStatus.ACTIVE || (snapshot.status == TrialStatus.EXPIRED && TrialSessions.hasPlayback()) -> {
-                Box(Modifier.fillMaxSize()) {
-                    content()
-                    if (snapshot.status == TrialStatus.ACTIVE && !TrialSessions.hasPlayback()) {
-                        val minutes = (snapshot.remainingMs + 59_999) / 60_000
-                        Text("Trial: ${minutes / 60}h ${minutes % 60}m remaining", color = Color(0xFFCFD8E3), fontSize = 12.sp,
-                            modifier = Modifier.align(Alignment.TopEnd).background(Color(0xDD101923)).padding(10.dp))
-                    }
-                }
+                content()
             }
             snapshot.status == TrialStatus.NEEDS_CODE -> TrialActivationScreen(onExit)
             else -> TrialEndedScreen(onExit)
