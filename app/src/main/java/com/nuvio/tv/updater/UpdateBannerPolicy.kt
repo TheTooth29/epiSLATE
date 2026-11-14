@@ -1,6 +1,9 @@
 package com.nuvio.tv.updater
 
 internal object UpdateBannerPolicy {
+    fun canPresentPrompt(isHome: Boolean, isManual: Boolean, isPlayer: Boolean, startupReady: Boolean): Boolean =
+        startupReady && !isPlayer && (isHome || isManual)
+
     fun shouldShow(
         isRemoteNewer: Boolean,
         force: Boolean,

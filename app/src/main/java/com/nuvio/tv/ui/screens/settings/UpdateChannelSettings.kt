@@ -76,7 +76,7 @@ internal fun UpdateChannelSettings(
     }
 
     SettingsActionRow(
-        title = stringResource(R.string.about_check_updates),
+        title = stringResource(if (state.isUpdateAvailable) R.string.update_startup_title else R.string.about_check_updates),
         subtitle = stringResource(R.string.about_check_updates_subtitle),
         trailingIcon = Icons.AutoMirrored.Filled.OpenInNew,
         onClick = {

@@ -411,8 +411,8 @@
     <string name="about_subtitle">App information, updates, and legal links</string>
     <string name="about_made_with_love">Made with ❤️ by Tapframe and friends</string>
     <string name="about_version">Version %1$s</string>
-    <string name="about_update_banner_title">Automatic update banner</string>
-    <string name="about_update_banner_subtitle">Show a banner when a new version is available</string>
+    <string name="about_update_banner_title">Startup update notification</string>
+    <string name="about_update_banner_subtitle">Show an update notification when epiSLATE starts</string>
     <string name="about_update_auto_install_title">Install updates automatically</string>
     <string name="about_update_auto_install_subtitle">Download new versions in the background and install them while the device is idle</string>
     <string name="about_update_auto_install_notice_title">Notify after automatic updates</string>
@@ -3408,4 +3408,8 @@
     <string name="catalog_order_bulk_hide_apply">Hide selected (%1$d)</string>
     <string name="catalog_order_bulk_select">Select</string>
     <string name="catalog_order_bulk_selected">Selected</string>
+    <string name="update_startup_title">epiSLATE update available</string>
+    <string name="update_startup_installed">epiSLATE updated</string>
+    <string name="update_install_update">Install update</string>
+    <string name="update_later">Later</string>
 </resources>
