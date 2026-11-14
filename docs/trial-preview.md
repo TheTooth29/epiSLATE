@@ -27,3 +27,5 @@ Validation: run the trial unit tests with the trial build flag, then device-test
 - The local owner ledger has five passing tests; it remains outside this repository.
 
 The complete app compilation was intentionally cancelled after it put excessive memory pressure on the local computer. The isolated compile is not full integration verification. No APK was assembled, no remote build was dispatched, and no emulator/device acceptance test was performed. Full app compilation and Android remote/focus, playback, recording, Settings relock, and side-by-side-installation checks remain required before distribution.
+
+The normal beta configuration and merged manifest were also generated and verified: original package, version, all 12 launcher labels, provider authority, updates enabled, and trial enforcement disabled. No APK was assembled by these configuration checks.

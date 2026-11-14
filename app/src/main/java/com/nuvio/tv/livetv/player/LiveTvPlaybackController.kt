@@ -310,6 +310,7 @@ class LiveTvPlaybackController @Inject constructor(
 
     /** Plays [playlist] (a recording that's still being made), a few seconds behind live. */
     fun playFromRecording(playlist: java.io.File, fromStart: Boolean = false) {
+        if (!com.nuvio.tv.core.trial.TrialAccess.get(context).canStart()) return
         val p = _player ?: return
         _recordingPlayback.value = playlist
         _recordingStarting.value = true
@@ -596,6 +597,8 @@ class LiveTvPlaybackController @Inject constructor(
         /** Catch-up: the real time the replay should start at (the show's start). */
         catchupStartMs: Long? = null
     ) {
+        if (!com.nuvio.tv.core.trial.TrialAccess.get(context).canStart()) return
+        com.nuvio.tv.core.trial.TrialSessions.enter("live")
         // Something chosen to play (back from the background through a launcher row, say):
         // that wins over picking up what was on before.
         resumeAfterBackground = null
@@ -798,6 +801,7 @@ class LiveTvPlaybackController @Inject constructor(
     }
 
     fun stop() {
+        com.nuvio.tv.core.trial.TrialSessions.leave("live")
         clearStarting()
         reconnectJob?.cancel()
         stopReplayCache()
@@ -1455,6 +1459,11 @@ class LiveTvPlaybackController @Inject constructor(
                 error = if (playbackState == Player.STATE_READY) null else _state.value.error,
                 reconnectAttempt = if (playbackState == Player.STATE_READY) 0 else _state.value.reconnectAttempt
             )
+            if (playbackState == Player.STATE_ENDED && !com.nuvio.tv.core.trial.TrialAccess.get(context).canStart()
+                && (_state.value.catchupTitle != null || _recordingPlayback.value != null)) {
+                stop()
+                return
+            }
             if (playbackState == Player.STATE_ENDED && _shiftStartedAt.value != null && timeshift.isRecording) {
                 // Caught up with the end of what's recorded while it's still recording: carry on
                 // from here (the newest pieces come in), rather than dropping back to live.
@@ -1713,7 +1722,12 @@ class LiveTvPlaybackController @Inject constructor(
             val key = currentChannel?.key
             if (key != null && onLiveFailure?.invoke(key) == true) return
         }
-        if (!autoReconnect || attempt > MAX_RECONNECTS) return
+        if (!autoReconnect || attempt > MAX_RECONNECTS) {
+            if (!com.nuvio.tv.core.trial.TrialAccess.get(context).canStart()) {
+                com.nuvio.tv.core.trial.TrialSessions.leave("live")
+            }
+            return
+        }
         reconnectJob?.cancel()
         reconnectJob = scope.launch {
             delay((attempt * 2_000L).coerceAtMost(10_000L))
@@ -1887,6 +1901,7 @@ class LiveTvPlaybackController @Inject constructor(
     }
 
     private fun release() {
+        com.nuvio.tv.core.trial.TrialSessions.leave("live")
         backgroundJob?.cancel()
         backgroundJob = null
         resumeAfterBackground = null

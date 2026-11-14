@@ -113,6 +113,8 @@ class PlayerRuntimeController(
 ) {
 
     /** Resolved once so every `context.getString(...)` here follows the app language. */
+    internal var trialPlaybackAdmitted = false
+    internal var trialPlaybackVideoId: String? = null
     internal val context: Context = context.withAppLocale()
 
     companion object {

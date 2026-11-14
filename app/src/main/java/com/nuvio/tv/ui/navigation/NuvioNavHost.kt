@@ -27,7 +27,7 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
+import com.nuvio.tv.core.trial.trialComposable
 import androidx.navigation.navArgument
 import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.core.party.PartyMedia
@@ -73,6 +73,7 @@ fun NuvioNavHost(
     startDestination: String = Screen.Home.route,
     hideBuiltInHeaders: Boolean = false
 ) {
+    com.nuvio.tv.core.trial.TrialNavigationSession(navController) {
     PlaybackAvailabilityProvider {
         // The NavController keeps its back stack ViewModels in the store of the owner it is
         // composed under, so use the session store when MainActivity provides one.
@@ -89,6 +90,8 @@ fun NuvioNavHost(
     // Live TV fork: Sports reminders and scoring alerts, on top of whatever screen you're on.
     com.nuvio.tv.livetv.sports.SportsHost(navController)
 }
+
+} // TrialNavigationSession
 
 @Composable
 private fun PlaybackNavHost(
@@ -178,7 +181,7 @@ private fun PlaybackNavHost(
             }
         }
     ) {
-        composable(Screen.ExperienceModeSelection.route) {
+        trialComposable(Screen.ExperienceModeSelection.route) {
             ExperienceModeSelectionScreen(
                 onContinue = { mode ->
                     val destination = if (mode == ExperienceMode.ESSENTIAL) {
@@ -193,7 +196,7 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(Screen.LayoutSelection.route) {
+        trialComposable(Screen.LayoutSelection.route) {
             LayoutSelectionScreen(
                 onContinue = {
                     navController.navigate(Screen.Home.route) {
@@ -203,7 +206,7 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(Screen.Home.route) {
+        trialComposable(Screen.Home.route) {
             // Live TV fork: back from On Demand, Home starts from its own hero backdrop.
             com.nuvio.tv.livetv.ondemand.OnDemandBackdropGuard.restoreForHome()
             // Live TV fork: keep Home's latest layout settings for the On Demand page.
@@ -335,7 +338,7 @@ private fun PlaybackNavHost(
             }
         }
 
-        composable(
+        trialComposable(
             route = Screen.Detail.route,
             arguments = listOf(
                 navArgument("itemId") { type = NavType.StringType },
@@ -567,7 +570,7 @@ private fun PlaybackNavHost(
             }
         }
 
-        composable(
+        trialComposable(
             route = Screen.Stream.route,
             arguments = listOf(
                 navArgument("videoId") { type = NavType.StringType },
@@ -800,7 +803,7 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(
+        trialComposable(
             route = Screen.Player.route,
             arguments = listOf(
                 navArgument("streamUrl") { type = NavType.StringType },
@@ -1274,7 +1277,7 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(Screen.Search.route) { backStackEntry ->
+        trialComposable(Screen.Search.route) { backStackEntry ->
             val searchViewModel: com.nuvio.tv.ui.screens.search.SearchViewModel =
                 androidx.hilt.navigation.compose.hiltViewModel(backStackEntry)
             SearchScreen(
@@ -1328,7 +1331,7 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(Screen.Discover.route) {
+        trialComposable(Screen.Discover.route) {
             DiscoverScreen(
                 showBuiltInHeader = !hideBuiltInHeaders,
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
@@ -1345,7 +1348,7 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(Screen.Library.route) {
+        trialComposable(Screen.Library.route) {
             LibraryScreen(
                 showBuiltInHeader = !hideBuiltInHeaders,
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
@@ -1378,7 +1381,7 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(Screen.LiveTv.route) {
+        trialComposable(Screen.LiveTv.route) {
             com.nuvio.tv.livetv.ui.LiveTvGuideScreen(
                 onOpenFullscreen = {
                     navController.navigate(Screen.LiveTvPlayer.route) { launchSingleTop = true }
@@ -1398,7 +1401,7 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(Screen.Recordings.route) {
+        trialComposable(Screen.Recordings.route) {
             // Live TV fork: recorded shows, played in Nuvio's own player.
             com.nuvio.tv.livetv.record.RecordingsScreen(
                 onPlay = { url, title, poster, recordingId, fromStart ->
@@ -1420,14 +1423,14 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(Screen.Sports.route) {
+        trialComposable(Screen.Sports.route) {
             // Live TV fork: the Sports page (scores, schedules, which of your channels show each game).
             com.nuvio.tv.livetv.sports.SportsScreen(
                 onOpenLive = { com.nuvio.tv.livetv.sports.openLiveTvFullscreen(navController) }
             )
         }
 
-        composable(Screen.OnDemand.route) {
+        trialComposable(Screen.OnDemand.route) {
             // Live TV fork: On Demand in Nuvio's own home layout (Classic, Grid or Modern, as set
             // for Home), with every layout option taken from Home itself.
             // Home's settings, read safely: Home may not be in the history (it's removed when the
@@ -1475,7 +1478,7 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(Screen.LiveTvPlayer.route) {
+        trialComposable(Screen.LiveTvPlayer.route) {
             // Live TV fork: full screen now happens inside the guide (one video view that just
             // grows), so this route hands over to the guide in full screen.
             androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -1489,13 +1492,13 @@ private fun PlaybackNavHost(
             }
         }
 
-        composable(Screen.LiveTvSettings.route) {
+        trialComposable(Screen.LiveTvSettings.route) {
             com.nuvio.tv.ui.screens.settings.LiveTvSettingsScreen(
                 onBack = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.Settings.route) {
+        trialComposable(Screen.Settings.route) {
             SettingsScreen(
                 showBuiltInHeader = !hideBuiltInHeaders,
                 onNavigateToLiveTv = { navController.navigate(Screen.LiveTvSettings.route) },
@@ -1520,7 +1523,7 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(
+        trialComposable(
             route = Screen.WatchParty.route,
             arguments = listOf(
                 navArgument("code") {
@@ -1536,7 +1539,7 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(Screen.ManageProfiles.route) {
+        trialComposable(Screen.ManageProfiles.route) {
             ProfileSelectionScreen(
                 onProfileSelected = {},
                 screenMode = ProfileSelectionMode.Management,
@@ -1544,31 +1547,31 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(Screen.Tracking.route) {
+        trialComposable(Screen.Tracking.route) {
             TrackingSettingsScreen(
                 onBackPress = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.TmdbSettings.route) {
+        trialComposable(Screen.TmdbSettings.route) {
             TmdbSettingsScreen(
                 onBackPress = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.ThemeSettings.route) {
+        trialComposable(Screen.ThemeSettings.route) {
             ThemeSettingsScreen(
                 onBackPress = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.PlaybackSettings.route) {
+        trialComposable(Screen.PlaybackSettings.route) {
             PlaybackSettingsScreen(
                 onBackPress = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.About.route) {
+        trialComposable(Screen.About.route) {
             AboutScreen(
                 onBackPress = { navController.popBackStack() },
                 onNavigateToSupportersContributors = {
@@ -1581,20 +1584,20 @@ private fun PlaybackNavHost(
         }
 
         if (AppFeaturePolicy.supportNuvioEnabled) {
-            composable(Screen.SupportersContributors.route) {
+            trialComposable(Screen.SupportersContributors.route) {
                 SupportersContributorsScreen(
                     onBackPress = { navController.popBackStack() }
                 )
             }
         }
 
-        composable(Screen.LicensesAttributions.route) {
+        trialComposable(Screen.LicensesAttributions.route) {
             LicensesAttributionsScreen(
                 onBackPress = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.AddonManager.route) {
+        trialComposable(Screen.AddonManager.route) {
             AddonManagerScreen(
                 showBuiltInHeader = !hideBuiltInHeaders,
                 onBackPress = { navController.popBackStack() },
@@ -1603,13 +1606,13 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(Screen.CatalogOrder.route) {
+        trialComposable(Screen.CatalogOrder.route) {
             CatalogOrderScreen(
                 onBackPress = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.Collections.route) {
+        trialComposable(Screen.Collections.route) {
             com.nuvio.tv.ui.screens.collection.CollectionManagementScreen(
                 onNavigateToEditor = { collectionId ->
                     navController.navigate(Screen.CollectionEditor.createRoute(collectionId))
@@ -1618,7 +1621,7 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(
+        trialComposable(
             route = Screen.CollectionEditor.route,
             arguments = listOf(
                 navArgument("collectionId") {
@@ -1633,7 +1636,7 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(
+        trialComposable(
             route = Screen.FolderDetail.route,
             arguments = listOf(
                 navArgument("collectionId") { type = NavType.StringType },
@@ -1650,38 +1653,38 @@ private fun PlaybackNavHost(
         }
 
         if (AppFeaturePolicy.pluginsEnabled) {
-            composable(Screen.Plugins.route) {
+            trialComposable(Screen.Plugins.route) {
                 PluginScreen(
                     onBackPress = { navController.popBackStack() }
                 )
             }
         }
 
-        composable(Screen.Account.route) {
+        trialComposable(Screen.Account.route) {
             AuthQrSignInScreen(
                 onBackPress = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.AuthSignIn.route) {
+        trialComposable(Screen.AuthSignIn.route) {
             AuthQrSignInScreen(
                 onBackPress = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.AuthQrSignIn.route) {
+        trialComposable(Screen.AuthQrSignIn.route) {
             AuthQrSignInScreen(
                 onBackPress = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.LayoutSettings.route) {
+        trialComposable(Screen.LayoutSettings.route) {
             LayoutSettingsScreen(
                 onBackPress = { navController.popBackStack() }
             )
         }
 
-        composable(
+        trialComposable(
             route = Screen.CatalogSeeAll.route,
             arguments = listOf(
                 navArgument("catalogId") { type = NavType.StringType },
@@ -1736,7 +1739,7 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(
+        trialComposable(
             route = Screen.CastDetail.route,
             arguments = listOf(
                 navArgument("personId") { type = NavType.StringType },
@@ -1755,7 +1758,7 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(
+        trialComposable(
             route = Screen.TmdbEntityBrowse.route,
             arguments = listOf(
                 navArgument("entityKind") { type = NavType.StringType },

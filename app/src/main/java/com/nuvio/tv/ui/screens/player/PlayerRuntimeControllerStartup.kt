@@ -13,6 +13,7 @@ internal fun PlayerRuntimeController.attachHostActivity(activity: Activity?) {
 }
 
 internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
+    if (!com.nuvio.tv.core.trial.TrialAccess.get(context).canStart()) return
     if (initialPlaybackStarted) return
 
     initialPlaybackStarted = true

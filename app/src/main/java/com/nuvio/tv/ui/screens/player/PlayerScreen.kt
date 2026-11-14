@@ -213,6 +213,9 @@ fun PlayerScreen(
             partyNotice = null
         }
     }
+    LaunchedEffect(uiState.playbackEnded) {
+        if (uiState.playbackEnded) com.nuvio.tv.core.trial.TrialSessions.endMovies()
+    }
     val postPlayRecommendationState by viewModel.postPlayRecommendationUiState.collectAsState()
     val effectiveAutoplayEnabled by viewModel.effectiveAutoplayEnabled.collectAsState(initial = false)
     val lifecycleOwner = LocalLifecycleOwner.current

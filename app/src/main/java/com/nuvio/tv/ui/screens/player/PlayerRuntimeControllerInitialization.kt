@@ -156,6 +156,15 @@ internal fun PlayerRuntimeController.initializePlayer(
     allowEngineFailover: Boolean = true,
     startPaused: Boolean = false
 ) {
+    if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) {
+        if (com.nuvio.tv.core.trial.TrialAccess.get(context).canStart()) {
+            trialPlaybackAdmitted = true
+            trialPlaybackVideoId = currentVideoId
+        } else if (!trialPlaybackAdmitted || trialPlaybackVideoId != currentVideoId) {
+            com.nuvio.tv.core.trial.TrialSessions.endMovies()
+            return
+        }
+    }
     if (url.isEmpty()) {
         _uiState.update { it.copy(error = context.getString(R.string.player_error_no_stream_url), showLoadingOverlay = false) }
         return

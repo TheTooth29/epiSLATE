@@ -143,6 +143,12 @@ class LiveTvRecorder @Inject constructor(
             seriesId = seriesId,
             fromCatchup = finite
         )
+        if (!com.nuvio.tv.core.trial.TrialAccess.get(context).canStart()) {
+            val failed = rec.copy(status = RecordingStatus.FAILED, endedAtMs = now, problem = "The epiSLATE trial has ended")
+            save(failed); update(failed)
+            runCatching { onFinished(failed) }
+            return failed
+        }
         // Not enough room to start: make room (if allowed) or say so.
         if (!ensureSpace(dir, protect = id)) {
             val failed = rec.copy(status = RecordingStatus.FAILED, endedAtMs = now, problem = "Not enough storage space to record")
@@ -157,6 +163,13 @@ class LiveTvRecorder @Inject constructor(
         jobs[id] = scope.launch {
             // Accounts with one connection can refuse a new one while the old is still closing.
             if (startDelayMs > 0) delay(startDelayMs)
+            if (!com.nuvio.tv.core.trial.TrialAccess.get(context).canStart()) {
+                val failed = rec.copy(status = RecordingStatus.FAILED, endedAtMs = System.currentTimeMillis(), problem = "The epiSLATE trial has ended")
+                save(failed); update(failed)
+                runCatching { onFinished(failed) }
+                stopServiceIfIdle()
+                return@launch
+            }
             record(rec, url, channel.headers, finite, fallbacks, onFinished, channel.sourceId, resumeFrom)
         }
         com.nuvio.tv.livetv.model.LiveTvLoadReport.add("Recording \"$title\" on ${channel.name} until ${java.util.Date(stopAtMs)}")

@@ -861,6 +861,7 @@ private fun PlayerRuntimeController.openExternalStreamInBrowser(
 internal fun PlayerRuntimeController.switchToSourceStream(
     stream: Stream
 ) {
+    if (!com.nuvio.tv.core.trial.TrialAccess.get(context).canStart()) return
     sourceStreamsScope?.cancel()
     sourceStreamsScope = null
     sourceStreamsJob = null
@@ -1445,6 +1446,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
     forcedTargetVideo: Video? = null,
     isAutoPlay: Boolean = false
 ) {
+    if (!com.nuvio.tv.core.trial.TrialAccess.get(context).canStart()) return
     if (openExternalStreamInBrowser(stream = stream, fromEpisodePanel = true)) {
         return
     }
@@ -1867,6 +1869,10 @@ internal fun PlayerRuntimeController.cancelNextEpisodePreload() {
 }
 
 internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = false) {
+    if (!com.nuvio.tv.core.trial.TrialAccess.get(context).canStart()) {
+        com.nuvio.tv.core.trial.TrialSessions.endMovies()
+        return
+    }
     if (isPartyControlLocked) {
         if (userInitiated) partyBlocksControl()
         return

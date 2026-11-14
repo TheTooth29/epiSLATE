@@ -520,6 +520,7 @@ class ExternalPlaybackTracker @Inject constructor(
         skipSegmentsJson: String?,
         context: Context
     ): Boolean {
+        if (!com.nuvio.tv.core.trial.TrialAccess.get(context).canStart()) return false
 
         val input = ExternalPlayerInput(
             url = url,

@@ -429,6 +429,11 @@ class LiveTvRecordingScheduler @Inject constructor(
             if (!started) { load() }
             val s = _schedules.value.firstOrNull { it.id == id } ?: run { recorder.stopServiceIfIdle(); return@launch }
             val now = System.currentTimeMillis()
+            if (!com.nuvio.tv.core.trial.TrialAccess.get(context).canStart()) {
+                drop(s, "The epiSLATE trial has ended")
+                recorder.stopServiceIfIdle()
+                return@launch
+            }
             if (!s.useCatchup) {
                 if (now >= s.stopMs) { drop(s, "\"${s.title}\" was missed"); return@launch }
                 // Too early (the alarm came early): set it again.

@@ -445,6 +445,7 @@ open class MainActivity : ComponentActivity() {
         captureDeepLinkIntent(intent)
 
         setContent {
+            com.nuvio.tv.core.trial.TrialAppGate(onExit = { finish() }) {
             var hasSelectedProfileThisSession by rememberSaveable { mutableStateOf(false) }
             var startupSession by remember { mutableIntStateOf(0) }
             // Triggered immediately on profile click (before system confirms selection).
@@ -1415,6 +1416,8 @@ open class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+        } // TrialAppGate / setContent wrapper
 
         jankStats = JankStats.createAndTrack(window) { frameData ->
             // Counted per screen for the start-up report (Live TV says guide or full screen).
