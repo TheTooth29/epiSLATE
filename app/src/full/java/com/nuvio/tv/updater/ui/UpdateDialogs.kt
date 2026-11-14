@@ -191,3 +191,42 @@ internal fun UpdateUnknownSourcesDialog(
         }
     }
 }
+
+@Composable
+internal fun UpdateStartupDialog(
+    state: com.nuvio.tv.updater.UpdateUiState,
+    update: AppUpdate,
+    onInstall: () -> Unit,
+    onLater: () -> Unit
+) {
+    val laterFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { laterFocus.requestFocusAfterFrames() }
+    NuvioDialog(
+        onDismiss = onLater,
+        title = stringResource(if (state.update != null) R.string.update_startup_title else R.string.update_startup_installed),
+        subtitle = update.tag,
+        width = 560.dp,
+        suppressFirstKeyUp = false
+    ) {
+        androidx.compose.foundation.layout.Column(
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+        ) {
+            if (state.isDownloading) {
+                Text(if (state.downloadProgress != null)
+                    stringResource(R.string.update_downloading_progress, (state.downloadProgress * 100).toInt())
+                    else stringResource(R.string.update_downloading_ellipsis))
+            }
+            state.errorMessage?.let { Text(it) }
+            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
+                if (state.update != null) {
+                    Button(onClick = onInstall, enabled = !state.isDownloading) {
+                        Text(stringResource(R.string.update_install_update))
+                    }
+                }
+                Button(onClick = onLater, modifier = Modifier.focusRequester(laterFocus)) {
+                    Text(stringResource(if (state.update != null) R.string.update_later else R.string.update_close))
+                }
+            }
+        }
+    }
+}

@@ -1,16 +1,8 @@
 package com.nuvio.tv.updater.ui
 
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -18,7 +10,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
@@ -39,12 +30,6 @@ fun UpdateBannerHost(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    var showReleaseNotes by remember { mutableStateOf(false) }
-
-    LaunchedEffect(state.update?.tag) {
-        showReleaseNotes = false
-    }
-
     LaunchedEffect(state.feedbackMessage) {
         val message = state.feedbackMessage ?: return@LaunchedEffect
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -61,49 +46,28 @@ fun UpdateBannerHost(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // A newer release takes the banner; otherwise it can report the release that was just installed automatically.
+    // Prefer an available update over the notice for a completed automatic install.
     val update = state.update ?: state.installedUpdate
     val showBanner = state.showBanner && update != null
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        AnimatedVisibility(
-            visible = showBanner,
-            enter = expandVertically(
-                expandFrom = Alignment.Top,
-                animationSpec = tween(durationMillis = 300)
-            ) + fadeIn(animationSpec = tween(durationMillis = 180)),
-            exit = shrinkVertically(
-                shrinkTowards = Alignment.Top,
-                animationSpec = tween(durationMillis = 240)
-            ) + fadeOut(animationSpec = tween(durationMillis = 150))
-        ) {
-            update?.let {
-                UpdateBanner(
-                    state = state,
-                    update = it,
-                    isInstalledUpdate = state.update == null,
-                    autoDismissPaused = showReleaseNotes,
-                    onDownload = onDownload,
-                    onInstall = onInstall,
-                    onShowReleaseNotes = { showReleaseNotes = true },
-                    onDismiss = onDismissBanner
-                )
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        ) {
-            content()
+    var readyToPrompt by remember { mutableStateOf(false) }
+    LaunchedEffect(showBanner) {
+        readyToPrompt = false
+        if (showBanner) {
+            // Let the startup splash fade and homepage settle before taking focus.
+            kotlinx.coroutines.delay(600)
+            readyToPrompt = true
         }
     }
 
-    if (showReleaseNotes && update != null) {
-        UpdateReleaseNotesDialog(
+    // Keep the homepage at full size; dialogs use a separate window.
+    Box(modifier = Modifier.fillMaxSize()) { content() }
+
+    if (showBanner && readyToPrompt && update != null && !state.showUnknownSourcesDialog) {
+        UpdateStartupDialog(
+            state = state,
             update = update,
-            onDismiss = { showReleaseNotes = false }
+            onInstall = { if (state.downloadedApkPath != null) onInstall() else onDownload() },
+            onLater = onDismissBanner
         )
     }
 

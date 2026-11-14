@@ -23,6 +23,7 @@ import kotlinx.coroutines.withContext
 
 data class UpdateUiState(
     val isChecking: Boolean = false,
+    val isManualPrompt: Boolean = false,
     val update: AppUpdate? = null,
     val isUpdateAvailable: Boolean = false,
     val isDownloading: Boolean = false,
@@ -52,6 +53,7 @@ class UpdateViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(UpdateUiState())
     val uiState: StateFlow<UpdateUiState> = _uiState.asStateFlow()
     private var updateCheckJob: Job? = null
+    private var dismissedThisSession: String? = null
 
     init {
         viewModelScope.launch {
@@ -67,6 +69,8 @@ class UpdateViewModel @Inject constructor(
                     autoInstallNoticeEnabled = autoInstallNoticeEnabled
                 )
             }
+            // Old banner dismissals must not permanently suppress startup reminders.
+            updatePreferences.setIgnoredTag(null)
             downloadStore.clearIfInstalled()
             consumeAutoInstalledUpdate()
             syncBackgroundJobs()
@@ -85,6 +89,7 @@ class UpdateViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     isChecking = true,
+                    isManualPrompt = force,
                     showBanner = false,
                     showUnknownSourcesDialog = false,
                     errorMessage = null,
@@ -92,7 +97,7 @@ class UpdateViewModel @Inject constructor(
                 )
             }
 
-            val dismissedTag = updatePreferences.ignoredTag.first()
+            val dismissedTag = dismissedThisSession
             val result = updateRepository.getLatestUpdate(channel)
             updatePreferences.setLastCheckAtMs(System.currentTimeMillis())
 
@@ -180,12 +185,7 @@ class UpdateViewModel @Inject constructor(
                 installedUpdate = null
             )
         }
-        val tag = state.update?.tag
-        if (tag != null) {
-            viewModelScope.launch {
-                updatePreferences.setIgnoredTag(tag)
-            }
-        }
+        dismissedThisSession = state.update?.tag
     }
 
     fun dismissUnknownSourcesDialog() {
@@ -277,7 +277,8 @@ class UpdateViewModel @Inject constructor(
                             errorMessage = null
                         )
                     }
-                    installUpdateOrRequestPermission()
+                    // Later also defers installation if the user dismisses during download.
+                    if (_uiState.value.showBanner) installUpdateOrRequestPermission()
                 }
                 .onFailure { error ->
                     _uiState.update {
@@ -286,7 +287,7 @@ class UpdateViewModel @Inject constructor(
                             downloadProgress = null,
                             downloadedApkPath = null,
                             errorMessage = error.message ?: context.getString(R.string.update_error_download_failed),
-                            showBanner = true
+                            showBanner = it.showBanner
                         )
                     }
                 }

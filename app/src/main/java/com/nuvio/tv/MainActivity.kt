@@ -1261,12 +1261,20 @@ open class MainActivity : ComponentActivity() {
                     val updateViewModel: UpdateViewModel = hiltViewModel(this@MainActivity)
                     val updateState by updateViewModel.uiState.collectAsState()
                     val updateBannerState = updateState.copy(
-                        showBanner = updateState.showBanner && currentRoute?.startsWith("player/") != true
+                        showBanner = updateState.showBanner && com.nuvio.tv.updater.UpdateBannerPolicy.canPresentPrompt(
+                            isHome = currentRoute == Screen.Home.route,
+                            isManual = updateState.isManualPrompt,
+                            isPlayer = currentRoute?.startsWith("player/") == true,
+                            startupReady = !shouldShowStartupSplash(
+                                enabled = startupSplashEnabled,
+                                complete = startupLoadingState.complete,
+                                destination = startupDestination
+                            )
+                        )
                     )
-                    // Live TV fork: the Live TV row on Home lets Up through to the banner while it shows.
-                    LaunchedEffect(updateBannerState.showBanner, updateBannerState.update != null) {
+                    LaunchedEffect(Unit) {
                         com.nuvio.tv.livetv.home.LiveTvHomeReveal.updateBannerShown.value =
-                            updateBannerState.showBanner && updateBannerState.update != null
+                            false // The update dialog owns focus; there is no header banner.
                     }
 
                     UpdateBannerHost(
