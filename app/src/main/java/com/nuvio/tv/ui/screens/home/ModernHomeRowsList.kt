@@ -303,7 +303,12 @@ internal fun ModernHomeRowsList(
                     val fourthRow = firstFullRow?.let { first -> rows.firstOrNull { it.index == first.index + 3 } }
                     val bottom = fourthRow?.let { it.offset.toFloat() - 16.dp.toPx() }
                         ?.coerceIn(0f, size.height) ?: size.height
-                    clipRect(bottom = bottom) { this@drawWithContent.drawContent() }
+                    // Focus moves before bring-into-view finishes. Hide the outgoing
+                    // row's trailing strip while the incoming row reaches the top.
+                    val focusedRowIndex = carouselRows.list.indexOfFirst { it.key == activeRowKey.value }
+                    val focusedRow = rows.firstOrNull { it.index == focusedRowIndex }
+                    val top = focusedRow?.offset?.toFloat()?.coerceIn(0f, bottom) ?: 0f
+                    clipRect(top = top, bottom = bottom) { this@drawWithContent.drawContent() }
                 } else Modifier)
                 .graphicsLayer { alpha = trailerContentAlpha() }
                 .focusRequester(contentFocusRequester)

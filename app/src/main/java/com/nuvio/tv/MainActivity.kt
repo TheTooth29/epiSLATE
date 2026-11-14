@@ -283,7 +283,7 @@ private data class MainUiPrefs(
     val experienceMode: ExperienceMode? = null,
     val experienceModeLoaded: Boolean = false,
     val addonSetupSkipped: Boolean = false,
-    val sidebarCollapsed: Boolean = false,
+    val sidebarCollapsed: Boolean = true,
     val modernSidebarEnabled: Boolean = false,
     val modernSidebarBlurPref: Boolean = false,
     val discoverLocation: DiscoverLocation? = null,
@@ -456,13 +456,14 @@ open class MainActivity : ComponentActivity() {
             var focusedSplashBgUrl by remember { mutableStateOf<String?>(null) }
             var focusedSplashCacheKey by remember { mutableStateOf<String?>(null) }
             var focusedSplashTheme by remember { mutableStateOf<AppTheme?>(null) }
-            var onboardingCompletedThisSession by remember { mutableStateOf(false) }
-            var onboardingQrShown by remember { mutableStateOf(false) }
             var onboardingProfileSyncInProgress by remember { mutableStateOf(false) }
             val hasSeenAuthQrFlow = remember(appOnboardingDataStore) {
                 appOnboardingDataStore.hasSeenAuthQrOnFirstLaunch.map<Boolean, Boolean?> { it }
             }
             val hasSeenAuthQrOnFirstLaunch by hasSeenAuthQrFlow.collectAsState(initial = null)
+            // Sign-out resets onboarding on disk; also discard completion state from this session.
+            var onboardingCompletedThisSession by remember(hasSeenAuthQrOnFirstLaunch) { mutableStateOf(false) }
+            var onboardingQrShown by remember(hasSeenAuthQrOnFirstLaunch) { mutableStateOf(false) }
             val authState by authManager.authState.collectAsState()
             val context = LocalContext.current
 

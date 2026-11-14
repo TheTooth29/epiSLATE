@@ -483,7 +483,8 @@ private fun TabbedGridContent(
                     }
                     GridContentCard(
                         item = item,
-                        yearLabelOverride = if (item.apiType == "series") formatGridReleaseDate(item.released) else digitalDate,
+                        yearLabelOverride = (if (item.apiType == "series") formatGridReleaseDate(item.released) else digitalDate)
+                            ?.uppercase(java.util.Locale.US),
                         subtleReleaseDate = true,
                         posterCardStyle = posterCardStyle,
                         focusRequester = focusReq,
