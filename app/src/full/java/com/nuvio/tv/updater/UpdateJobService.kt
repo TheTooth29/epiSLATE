@@ -47,6 +47,7 @@ class UpdateJobService : JobService() {
     private var jobScope: CoroutineScope? = null
 
     override fun onStartJob(params: JobParameters): Boolean {
+        if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) return false
         val entryPoint = EntryPointAccessors.fromApplication(applicationContext, UpdateJobEntryPoint::class.java)
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         jobScope = scope

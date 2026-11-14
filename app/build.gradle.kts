@@ -109,6 +109,14 @@ fun truthy(value: String?): Boolean {
         value.equals("yes", ignoreCase = true)
 }
 
+val invitationTrialBuild = providers.gradleProperty("epislateTrial").orNull?.toBooleanStrictOrNull() ?: false
+if (invitationTrialBuild && gradle.startParameter.taskNames.any { it.contains("Playstore", ignoreCase = true) }) {
+    error("The invitation preview is supported only by the full distribution.")
+}
+if (invitationTrialBuild && (findProperty("livetvTestBuild") as String?)?.toBoolean() == true) {
+    error("Choose the dedicated trial identity or the generic test identity, not both.")
+}
+
 val buildingAppBundle = gradle.startParameter.taskNames.any { it.contains("bundle", ignoreCase = true) }
 val useDebugReleaseSigning = env("CI_USE_DEBUG_SIGNING").equals("true", ignoreCase = true)
 val useLocalFfmpegDecoder = truthy(
@@ -132,6 +140,10 @@ android {
 
     defaultConfig {
         applicationId = "com.nuvio.tv"
+        buildConfigField("boolean", "TRIAL_ENABLED", invitationTrialBuild.toString())
+        if (invitationTrialBuild) {
+            versionNameSuffix = "-trial"
+        }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = 24
         targetSdk = 36
@@ -176,6 +188,9 @@ android {
         buildConfigField("String", "SPONSOR_NAMES", buildConfigString(sponsorNames))
         buildConfigField("String", "SENTRY_DSN", buildConfigString(sentryDsn))
 
+        resValue("string", "epislate_trial_app_name", "epiSLATE Trial")
+        manifestPlaceholders["epislateAppLabel"] = if (invitationTrialBuild) "@string/epislate_trial_app_name" else "@string/app_name"
+
         // In-app updater (GitHub Releases)
         buildConfigField("String", "GITHUB_OWNER", "\"TheTooth29\"")
         buildConfigField("String", "GITHUB_REPO", "\"epiSLATE\"")
@@ -186,7 +201,7 @@ android {
         create("full") {
             dimension = "distribution"
             buildConfigField("boolean", "FEATURE_PLUGINS_ENABLED", "true")
-            buildConfigField("boolean", "FEATURE_IN_APP_UPDATES_ENABLED", "true")
+            buildConfigField("boolean", "FEATURE_IN_APP_UPDATES_ENABLED", (!invitationTrialBuild).toString())
             buildConfigField("boolean", "FEATURE_IN_APP_TRAILERS_ENABLED", "true")
             buildConfigField("boolean", "FEATURE_EXTERNAL_TRAILERS_ENABLED", "true")
             buildConfigField("boolean", "FEATURE_EXTERNAL_PLAYBACK_KEEP_ALIVE_ENABLED", "true")
@@ -393,7 +408,7 @@ android.defaultConfig.versionCode = (android.defaultConfig.versionCode ?: 1) * 1
 androidComponents {
     onVariants(selector().withBuildType("debug")) { variant ->
         val isPlaystore = variant.productFlavors.any { it.second == "playstore" }
-        variant.applicationId.set(if (isPlaystore) "com.nuvio.appdebug" else "com.nuvio.livetv")
+        variant.applicationId.set(if (invitationTrialBuild) "com.nuvio.livetv.trial" else if (isPlaystore) "com.nuvio.appdebug" else "com.nuvio.livetv")
     }
     // Live TV fork: release builds get their own app ID too, so they install next to official
     // Nuvio and update the fork's earlier builds in place.
@@ -402,7 +417,8 @@ androidComponents {
         // Test builds (-PlivetvTestBuild=true) get their own ID, so they install next to the
         // real app instead of replacing it.
         val testBuild = (findProperty("livetvTestBuild") as String?)?.toBoolean() == true
-        if (!isPlaystore) variant.applicationId.set(if (testBuild) "com.nuvio.livetv.test" else "com.nuvio.livetv")
+        if (invitationTrialBuild) variant.applicationId.set("com.nuvio.livetv.trial")
+        else if (!isPlaystore) variant.applicationId.set(if (testBuild) "com.nuvio.livetv.test" else "com.nuvio.livetv")
     }
     // Only the full flavor ships the in-app updater.
     onVariants(selector().withFlavor("distribution" to "full")) { variant ->

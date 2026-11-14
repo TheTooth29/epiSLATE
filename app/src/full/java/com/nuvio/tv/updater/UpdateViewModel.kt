@@ -55,6 +55,7 @@ class UpdateViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            if (BuildConfig.TRIAL_ENABLED) return@launch
             val enabled = updatePreferences.updateBannerEnabled.first()
             val channel = updatePreferences.getOrInitializeUpdateChannel()
             val autoInstallEnabled = updatePreferences.autoInstallEnabled.first()
@@ -77,6 +78,7 @@ class UpdateViewModel @Inject constructor(
     }
 
     fun checkForUpdates(force: Boolean, showNoUpdateFeedback: Boolean) {
+        if (BuildConfig.TRIAL_ENABLED) return
         if (!force && !_uiState.value.updateBannerEnabled) return
 
         updateCheckJob?.cancel()
@@ -245,6 +247,7 @@ class UpdateViewModel @Inject constructor(
     }
 
     fun downloadUpdate() {
+        if (BuildConfig.TRIAL_ENABLED) return
         val update = _uiState.value.update ?: return
 
         viewModelScope.launch {
@@ -294,6 +297,7 @@ class UpdateViewModel @Inject constructor(
     }
 
     fun installUpdateOrRequestPermission() {
+        if (BuildConfig.TRIAL_ENABLED) return
         val apkPath = _uiState.value.downloadedApkPath ?: return
         val apkFile = File(apkPath)
         if (!apkFile.exists()) {
@@ -356,6 +360,7 @@ class UpdateViewModel @Inject constructor(
 
     // Background checks run while the banner or automatic installs are on; the idle install job only with the latter.
     private fun syncBackgroundJobs() {
+        if (BuildConfig.TRIAL_ENABLED) return
         if (BuildConfig.IS_DEBUG_BUILD) return
         val state = _uiState.value
         if (state.updateBannerEnabled || state.autoInstallEnabled) {

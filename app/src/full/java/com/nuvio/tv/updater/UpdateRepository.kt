@@ -15,6 +15,7 @@ class UpdateRepository @Inject constructor(
 ) {
 
     suspend fun getLatestUpdate(channel: UpdateChannel): Result<AppUpdate> {
+        if (BuildConfig.TRIAL_ENABLED) return Result.failure(NoEligibleUpdateException(channel))
         return runCatching {
             val owner = BuildConfig.GITHUB_OWNER
             val repo = BuildConfig.GITHUB_REPO
