@@ -5,6 +5,18 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class UpdateBannerPolicyTest {
+    @Test
+    fun `startup prompt waits for home and startup completion`() {
+        assertFalse(UpdateBannerPolicy.canPresentPrompt(true, false, false, false))
+        assertFalse(UpdateBannerPolicy.canPresentPrompt(false, false, false, true))
+        assertTrue(UpdateBannerPolicy.canPresentPrompt(true, false, false, true))
+    }
+
+    @Test
+    fun `manual settings check may prompt but playback never does`() {
+        assertTrue(UpdateBannerPolicy.canPresentPrompt(false, true, false, true))
+        assertFalse(UpdateBannerPolicy.canPresentPrompt(false, true, true, true))
+    }
 
     @Test
     fun `automatic check shows a new update when the banner is enabled`() {

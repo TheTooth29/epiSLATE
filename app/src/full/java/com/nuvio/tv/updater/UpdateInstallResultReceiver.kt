@@ -30,7 +30,10 @@ class UpdateInstallResultReceiver : BroadcastReceiver() {
         when (status) {
             PackageInstaller.STATUS_SUCCESS -> Unit
             PackageInstaller.STATUS_PENDING_USER_ACTION -> {
-                if (background) {
+                val validApk = apkFile != null && runCatching {
+                    ApkInstaller.requireSelfUpdate(context, apkFile)
+                }.isSuccess
+                if (background || !validApk) {
                     runCatching { context.packageManager.packageInstaller.abandonSession(sessionId) }
                 } else {
                     confirmationIntent(intent)?.let { confirm ->
