@@ -25,6 +25,7 @@ import com.nuvio.tv.core.tracking.TrackingProgressProvider
 import com.nuvio.tv.core.tracking.TrackingProgressProviderRegistry
 import com.nuvio.tv.core.tracking.mergeProgressProjectionWithRetainedLocal
 import com.nuvio.tv.core.tracking.mergeWatchedEpisodeProjection
+import com.nuvio.tv.core.tracking.mergeNuvioWatchedEpisodeProjection
 import com.nuvio.tv.core.tracking.TrackingProviderId
 import com.nuvio.tv.core.tracking.TrackingRefreshIntent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
@@ -703,10 +704,10 @@ class WatchProgressRepositoryImpl @Inject constructor(
                 retainsLocalWatchedEpisode = provider::retainsLocalWatchedEpisode
             )
         }
-        return watchedItemsPreferences.getAllItems(profileId)
-            .filter { it.season != null && it.episode != null }
-            .groupBy { it.contentId }
-            .mapValues { (_, items) -> items.map { it.season!! to it.episode!! }.toSet() }
+        val watchedItems = watchedItemsPreferences.getAllItems(profileId)
+        val progress = watchProgressPreferences.getAllRawEntries(profileId).values
+        if (profileManager.activeProfileId.value != profileId) return emptyMap()
+        return mergeNuvioWatchedEpisodeProjection(watchedItems, progress)
     }
 
     override suspend fun getShowIdSiblings(): Map<String, Set<String>> {
