@@ -11,9 +11,9 @@ def apk_info(aapt, apksigner, path):
     fields = dict(re.findall(r"(\w+)='([^']*)'", package_line))
     label = re.search(r"^application-label:'([^']*)'", badging, re.MULTILINE)
     certificates = subprocess.check_output([apksigner, "verify", "--print-certs", path], text=True)
-    # Recent build-tools identify signers by SDK range instead of signer number.
+    # Build-tools can label signers by number, SDK range, or signature scheme.
     signers = sorted(set(signer.lower() for signer in re.findall(
-        r"^Signer (?:#\d+|\(minSdkVersion=\d+, maxSdkVersion=\d+\)) certificate SHA-256 digest:[ \t]*([0-9a-fA-F]{64})[ \t]*$",
+        r"^(?:Signer (?:#\d+|\(minSdkVersion=\d+, maxSdkVersion=\d+\))|V[1234](?:\.\d+)? Signer:) certificate SHA-256 digest:[ \t]*([0-9a-fA-F]{64})[ \t]*$",
         certificates, re.MULTILINE
     )))
     if not signers:

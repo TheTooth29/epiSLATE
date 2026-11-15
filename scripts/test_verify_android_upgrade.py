@@ -19,6 +19,19 @@ class CertificateOutputTest(unittest.TestCase):
     def test_numbered_signer(self):
         self.assertEqual(self.info("Signer #1 certificate SHA-256 digest: " + "AB" * 32)["signers"], ["ab" * 32])
 
+    def test_actual_beta_2_runner_output(self):
+        output = """V2 Signer: certificate DN: CN=Nuvio Live TV fork
+V2 Signer: certificate SHA-256 digest: e2c9a67239c6297fb28a28b72a088ad32cff8aeb94e0157b02d22ee7aeb5cbd8
+V2 Signer: certificate SHA-1 digest: bd1bb0bfef152a4702f67d942534447fe1b80757
+V2 Signer: certificate MD5 digest: 346cdaf61533ad6cc11fb12635bd2f5b
+"""
+        self.assertEqual(self.info(output)["signers"], ["e2c9a67239c6297fb28a28b72a088ad32cff8aeb94e0157b02d22ee7aeb5cbd8"])
+
+    def test_scheme_labels_deduplicate_same_certificate(self):
+        output = "\n".join(f"{scheme} Signer: certificate SHA-256 digest: " + "ab" * 32
+                           for scheme in ["V1", "V2", "V3", "V3.1", "V4"])
+        self.assertEqual(self.info(output)["signers"], ["ab" * 32])
+
     def test_sdk_range_signers_and_duplicate_certificates(self):
         lines = [f"Signer (minSdkVersion={lo}, maxSdkVersion={hi}) certificate SHA-256 digest: " + "ab" * 32
                  for lo, hi in [(24, 32), (33, 2147483647)]]
