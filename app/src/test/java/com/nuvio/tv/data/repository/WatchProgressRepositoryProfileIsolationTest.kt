@@ -28,6 +28,32 @@ import org.junit.Test
 
 class WatchProgressRepositoryProfileIsolationTest {
     @Test
+    fun `fresh Nuvio sync projects completed episodes without a separate watched item`() = runTest {
+        val harness = harness(activeProfileId = 1)
+        val completed = progress("series-a", 100, 100).copy(contentType = "series", season = 1, episode = 1)
+        coEvery { harness.watchedPreferences.getAllItems(1) } returns emptyList()
+        coEvery { harness.progressPreferences.getAllRawEntries(1) } returns mapOf("series-a_s1e1" to completed)
+
+        assertEquals(mapOf("series-a" to setOf(1 to 1)), harness.repository.getWatchedShowEpisodes())
+        coVerify(exactly = 1) { harness.progressPreferences.getAllRawEntries(1) }
+        coVerify(exactly = 0) { harness.watchedPreferences.markAsWatched(any(), any()) }
+    }
+
+    @Test
+    fun `a profile change during episode snapshot prevents cross profile badges`() = runTest {
+        val harness = harness(activeProfileId = 1)
+        val completed = progress("series-a", 100, 100).copy(contentType = "series", season = 1, episode = 1)
+        coEvery { harness.watchedPreferences.getAllItems(1) } returns emptyList()
+        coEvery { harness.progressPreferences.getAllRawEntries(1) } coAnswers {
+            harness.activeProfile.value = 2
+            mapOf("series-a_s1e1" to completed)
+        }
+
+        assertEquals(emptyMap<String, Set<Pair<Int, Int>>>(), harness.repository.getWatchedShowEpisodes())
+        coVerify(exactly = 0) { harness.progressPreferences.getAllRawEntries(2) }
+    }
+
+    @Test
     fun `explicit save writes and queues only its playback profile`() = runTest {
         val harness = harness(activeProfileId = 2)
         val progress = progress("item", position = 2_000L, duration = 10_000L)

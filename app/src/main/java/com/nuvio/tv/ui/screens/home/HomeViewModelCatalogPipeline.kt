@@ -17,6 +17,8 @@ import com.nuvio.tv.domain.model.nextCatalogSkip
 import com.nuvio.tv.domain.model.skipStep
 import com.nuvio.tv.domain.model.stableKey
 import com.nuvio.tv.domain.model.WatchedItem
+import com.nuvio.tv.domain.model.WatchProgress
+import com.nuvio.tv.core.tracking.mergeNuvioWatchedEpisodeProjection
 import com.nuvio.tv.domain.model.supportsExtra
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -942,10 +944,11 @@ internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<Cat
         seriesWatchedObserverJob = viewModelScope.launch {
             combine(
                 fullyWatchedSeriesIds.fullyWatchedSeriesIds,
-                watchProgressRepository.watchedItems
-            ) { fullyWatched, watchedItems ->
-                fullyWatched to watchedItems
-            }.collectLatest { (fullyWatched, watchedItems) ->
+                watchProgressRepository.watchedItems,
+                watchProgressRepository.allProgress
+            ) { fullyWatched, watchedItems, progress ->
+                Triple(fullyWatched, watchedItems, progress)
+            }.collectLatest { (fullyWatched, watchedItems, progress) ->
                 val effectiveFullyWatched = if (
                     watchProgressRepository.activeProviderOwnsCompletedHistoryProjection()
                 ) {
@@ -954,6 +957,7 @@ internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<Cat
                     reconcileFullyWatchedFromLocalItems(
                         fullyWatched = fullyWatched,
                         watchedItems = watchedItems,
+                        progress = progress,
                         seriesContentIds = allSeriesItemsByKey.values
                     )
                 }
@@ -990,12 +994,10 @@ internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<Cat
 private fun HomeViewModel.reconcileFullyWatchedFromLocalItems(
     fullyWatched: Set<String>,
     watchedItems: List<WatchedItem>,
+    progress: List<WatchProgress>,
     seriesContentIds: Iterable<String>
 ): Set<String> {
-    val watchedEpisodesByContentId = watchedItems
-        .filter { it.season != null && it.episode != null }
-        .groupBy { it.contentId }
-        .mapValues { (_, items) -> items.map { it.season!! to it.episode!! }.toSet() }
+    val watchedEpisodesByContentId = mergeNuvioWatchedEpisodeProjection(watchedItems, progress)
     val cacheResolvedIds = mutableSetOf<String>()
     val cacheResolvedFullyWatched = buildSet {
         seriesContentIds.forEach { contentId ->

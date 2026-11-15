@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.home
 import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.player.PlayerSessionTracker
+import com.nuvio.tv.core.tracking.completedEpisodeChanges
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
@@ -13,10 +14,13 @@ internal fun HomeViewModel.observeSeriesWatchedBadges() {
     viewModelScope.launch {
         combine(
             watchProgressRepository.watchedItems,
+            watchProgressRepository.allProgress.completedEpisodeChanges(),
             seriesBadgeProfileReady,
             PlayerSessionTracker.isSessionOpen,
             cwPipelineRefreshTrigger
-        ) { items, profileId, playerOpen, refresh -> Triple(items to refresh, profileId, playerOpen) }
+        ) { items, completed, profileId, playerOpen, refresh ->
+            Triple(Triple(items, completed, refresh), profileId, playerOpen)
+        }
             .collectSeriesBadgeRefreshes { (_, profileId, playerOpen) ->
                 if (playerOpen || profileId == null) {
                     false
