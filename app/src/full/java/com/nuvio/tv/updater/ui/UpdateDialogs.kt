@@ -203,8 +203,12 @@ internal fun UpdateStartupDialog(
     LaunchedEffect(Unit) { laterFocus.requestFocusAfterFrames() }
     NuvioDialog(
         onDismiss = onLater,
-        title = stringResource(if (state.update != null) R.string.update_startup_title else R.string.update_startup_installed),
-        subtitle = update.tag,
+        title = stringResource(when {
+            state.isUpdatePreview -> R.string.update_preview_title
+            state.update != null -> R.string.update_startup_title
+            else -> R.string.update_startup_installed
+        }),
+        subtitle = if (state.isUpdatePreview) stringResource(R.string.update_test_manual_install) else update.tag,
         width = 560.dp,
         suppressFirstKeyUp = false
     ) {
@@ -218,13 +222,13 @@ internal fun UpdateStartupDialog(
             }
             state.errorMessage?.let { Text(it) }
             Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
-                if (state.update != null) {
+                if (state.update != null && !state.isUpdatePreview) {
                     Button(onClick = onInstall, enabled = !state.isDownloading) {
                         Text(stringResource(R.string.update_install_update))
                     }
                 }
                 Button(onClick = onLater, modifier = Modifier.focusRequester(laterFocus)) {
-                    Text(stringResource(if (state.update != null) R.string.update_later else R.string.update_close))
+                    Text(stringResource(if (state.update != null && !state.isUpdatePreview) R.string.update_later else R.string.update_close))
                 }
             }
         }

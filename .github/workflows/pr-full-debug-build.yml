@@ -141,8 +141,11 @@ jobs:
             sed -i 's#>\([^<]*\)</string>#>\1 Test</string>#' "$f"
           done
 
-      - name: Test updater and build signed epiSLATE Test APK
-        run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' --tests 'com.nuvio.tv.core.auth.AccountLocalDataResetServiceTest' --tests 'com.nuvio.tv.ui.screens.home.HomeRowVisibilityTest' --tests 'com.nuvio.tv.domain.model.CollectionOrderingTest' --tests 'com.nuvio.tv.core.image.CollectionCoverPreviewTest' --tests 'com.nuvio.tv.ui.screens.collection.GridReleaseDateTest' :app:assembleFullRelease --stacktrace -PlivetvTestBuild=true -PlivetvBuildNumber=2
+      - name: Test updater and beta regressions
+        run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' --tests 'com.nuvio.tv.core.auth.AccountLocalDataResetServiceTest' --tests 'com.nuvio.tv.ui.screens.home.HomeRowVisibilityTest' --tests 'com.nuvio.tv.domain.model.CollectionOrderingTest' --tests 'com.nuvio.tv.core.image.CollectionCoverPreviewTest' --tests 'com.nuvio.tv.ui.screens.collection.GridReleaseDateTest' --stacktrace -PlivetvTestBuild=true -PlivetvBuildNumber=3
+
+      - name: Build signed epiSLATE Test APK after tests pass
+        run: ./gradlew :app:assembleFullRelease --stacktrace -PlivetvTestBuild=true -PlivetvBuildNumber=3
 
       - name: Name epiSLATE test APK
         run: |

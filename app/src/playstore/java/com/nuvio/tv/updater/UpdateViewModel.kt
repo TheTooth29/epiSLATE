@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 data class UpdateUiState(
+    val supportsReleaseUpdates: Boolean = false,
+    val isUpdatePreview: Boolean = false,
     val isChecking: Boolean = false,
     val isManualPrompt: Boolean = false,
     val update: Any? = null,

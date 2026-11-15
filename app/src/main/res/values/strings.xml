@@ -3412,4 +3412,7 @@
     <string name="update_startup_installed">epiSLATE updated</string>
     <string name="update_install_update">Install update</string>
     <string name="update_later">Later</string>
+    <string name="update_preview_title">Preview update notification</string>
+    <string name="update_test_manual_install">Test builds are installed manually. This preview will not download or install anything.</string>
+    <string name="update_incompatible_apk">This APK is not a newer version of this app. No update was installed.</string>
 </resources>

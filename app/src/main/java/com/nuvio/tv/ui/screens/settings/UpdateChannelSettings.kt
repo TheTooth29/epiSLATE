@@ -28,6 +28,18 @@ internal fun UpdateChannelSettings(
     val context = LocalContext.current
     val viewModel: UpdateViewModel = hiltViewModel(context as ComponentActivity)
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    if (!state.supportsReleaseUpdates) {
+        SettingsActionRow(
+            title = stringResource(R.string.update_preview_title),
+            subtitle = stringResource(R.string.update_test_manual_install),
+            onClick = { viewModel.checkForUpdates(force = true, showNoUpdateFeedback = false) },
+            modifier = modifier.then(
+                if (initialFocusRequester != null) Modifier.focusRequester(initialFocusRequester)
+                else Modifier
+            )
+        )
+        return
+    }
     var showChannelDialog by rememberSaveable { mutableStateOf(false) }
     val channelName = when (state.updateChannel) {
         UpdateChannel.STABLE -> stringResource(R.string.update_channel_stable)

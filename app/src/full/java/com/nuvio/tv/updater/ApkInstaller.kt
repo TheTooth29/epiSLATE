@@ -7,10 +7,22 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.core.content.FileProvider
+import androidx.core.content.pm.PackageInfoCompat
 import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.R
 import java.io.File
 
 object ApkInstaller {
+    @Suppress("DEPRECATION")
+    fun requireSelfUpdate(context: Context, apkFile: File) {
+        val archive = context.packageManager.getPackageArchiveInfo(apkFile.absolutePath, 0)
+        require(UpdateInstallPolicy.isSelfUpdate(
+            installedPackage = context.packageName,
+            installedVersionCode = BuildConfig.VERSION_CODE.toLong(),
+            candidatePackage = archive?.packageName,
+            candidateVersionCode = archive?.let(PackageInfoCompat::getLongVersionCode)
+        )) { context.getString(R.string.update_incompatible_apk) }
+    }
 
     fun canRequestPackageInstalls(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -43,6 +55,7 @@ object ApkInstaller {
         background: Boolean,
         withDexMetadata: Boolean = true
     ) {
+        requireSelfUpdate(context, apkFile)
         val packageInstaller = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
             setAppPackageName(context.packageName)
@@ -80,6 +93,7 @@ object ApkInstaller {
 
     /** Hands the APK to the system installer screen, used when the session install cannot be completed. */
     fun launchSystemInstaller(context: Context, apkFile: File) {
+        requireSelfUpdate(context, apkFile)
         val authority = "${BuildConfig.APPLICATION_ID}.fileprovider"
         val uri = FileProvider.getUriForFile(context, authority, apkFile)
 

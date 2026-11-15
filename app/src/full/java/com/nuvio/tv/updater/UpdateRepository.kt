@@ -16,6 +16,9 @@ class UpdateRepository @Inject constructor(
 
     suspend fun getLatestUpdate(channel: UpdateChannel): Result<AppUpdate> {
         return runCatching {
+            check(UpdateInstallPolicy.supportsReleaseUpdates(BuildConfig.APPLICATION_ID)) {
+                "The published release feed does not provide updates for this app."
+            }
             val owner = BuildConfig.GITHUB_OWNER
             val repo = BuildConfig.GITHUB_REPO
 
