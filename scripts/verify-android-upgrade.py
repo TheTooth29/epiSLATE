@@ -11,12 +11,13 @@ def apk_info(aapt, apksigner, path):
     fields = dict(re.findall(r"(\w+)='([^']*)'", package_line))
     label = re.search(r"^application-label:'([^']*)'", badging, re.MULTILINE)
     certificates = subprocess.check_output([apksigner, "verify", "--print-certs", path], text=True)
-    signers = sorted(re.findall(
-        r"^Signer #\d+ certificate SHA-256 digest:\s*([0-9a-fA-F]{64})\s*$",
+    # Recent build-tools identify signers by SDK range instead of signer number.
+    signers = sorted(set(signer.lower() for signer in re.findall(
+        r"^Signer (?:#\d+|\(minSdkVersion=\d+, maxSdkVersion=\d+\)) certificate SHA-256 digest:[ \t]*([0-9a-fA-F]{64})[ \t]*$",
         certificates, re.MULTILINE
-    ))
+    )))
     if not signers:
-        raise ValueError("APK has no verified signing certificate")
+        raise ValueError("No signing certificate recognized in apksigner output:\n" + certificates)
     return {
         "package": fields["name"], "version_code": int(fields["versionCode"]),
         "version_name": fields["versionName"], "label": label.group(1) if label else None,
