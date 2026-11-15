@@ -48,6 +48,37 @@ import java.util.concurrent.atomic.AtomicInteger
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class HomeEnrichmentRetryTest {
 
+    @Test
+    fun `failed series badge lookup recovers when metadata becomes available`() = runBlocking {
+        val repository = newMetaRepository()
+        coEvery { repository.getMetaFromAllAddons(any(), any(), any()) } returns
+            flowOf(NetworkResult.Error("temporarily unavailable"))
+        val model = newViewModel(repository)
+        org.junit.Assert.assertNull(model.resolveBadgeEpisodes(itemId, "series"))
+        org.junit.Assert.assertFalse(model.cwBadgeEpisodeCache.containsKey("series:$itemId"))
+
+        model.cwMetaCache["series:$itemId"] = badgeSummary()
+        assertEquals(setOf(1 to 1), model.resolveBadgeEpisodes(itemId, "series"))
+    }
+
+    @Test
+    fun `a previous null badge cache entry does not suppress resolution`() = runBlocking {
+        val model = newViewModel(newMetaRepository())
+        model.cwBadgeEpisodeCache["series:$itemId"] = null
+        model.cwMetaCache["series:$itemId"] = badgeSummary()
+        assertEquals(setOf(1 to 1), model.resolveBadgeEpisodes(itemId, "series"))
+    }
+
+    private fun badgeSummary() = CwMetaSummary(
+        id = itemId, name = "Test series", poster = null, backdropUrl = null,
+        logo = null, description = null, genres = emptyList(), releaseInfo = null,
+        imdbRating = null, language = null, country = null,
+        videos = listOf(CwVideoSummary(
+            id = "$itemId:1:1", title = "Episode 1", released = "2020-01-01",
+            thumbnail = null, season = 1, episode = 1, overview = null, available = true
+        ))
+    )
+
     private val itemId = "tt0944947"
     private val otherId = "tt0903747"
 

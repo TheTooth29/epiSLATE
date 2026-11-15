@@ -141,8 +141,11 @@ jobs:
             sed -i 's#>\([^<]*\)</string>#>\1 Test</string>#' "$f"
           done
 
-      - name: Test updater and build signed epiSLATE Test APK
-        run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' --tests 'com.nuvio.tv.core.auth.AccountLocalDataResetServiceTest' --tests 'com.nuvio.tv.ui.screens.home.HomeRowVisibilityTest' --tests 'com.nuvio.tv.domain.model.CollectionOrderingTest' --tests 'com.nuvio.tv.core.image.CollectionCoverPreviewTest' --tests 'com.nuvio.tv.ui.screens.collection.GridReleaseDateTest' :app:assembleFullRelease --stacktrace -PlivetvTestBuild=true -PlivetvBuildNumber=2
+      - name: Test series badges and beta regressions
+        run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' --tests 'com.nuvio.tv.core.auth.AccountLocalDataResetServiceTest' --tests 'com.nuvio.tv.ui.screens.home.SeriesBadgeRefreshTest' --tests 'com.nuvio.tv.ui.screens.home.HomeEnrichmentRetryTest' --tests 'com.nuvio.tv.ui.screens.home.ContinueWatchingAiringRulesTest' --tests 'com.nuvio.tv.ui.screens.home.HomeRowVisibilityTest' --tests 'com.nuvio.tv.domain.model.CollectionOrderingTest' --tests 'com.nuvio.tv.core.image.CollectionCoverPreviewTest' --tests 'com.nuvio.tv.ui.screens.collection.GridReleaseDateTest' --stacktrace -PlivetvTestBuild=true -PlivetvBuildNumber=6 -PlivetvVersionName=1.0.0-beta.2
+
+      - name: Build signed epiSLATE Test APK after tests pass
+        run: ./gradlew :app:assembleFullRelease --stacktrace -PlivetvTestBuild=true -PlivetvBuildNumber=6 -PlivetvVersionName=1.0.0-beta.2
 
       - name: Name epiSLATE test APK
         run: |
