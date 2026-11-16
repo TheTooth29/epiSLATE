@@ -307,6 +307,8 @@ fun ThemeSettingsContent(
                 )
             }
 
+            HomeDimmingSettingsCard()
+
             AmbientModeSettingsCard()
 
             SettingsGroupCard(

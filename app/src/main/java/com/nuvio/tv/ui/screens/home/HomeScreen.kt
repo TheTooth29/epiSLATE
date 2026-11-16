@@ -256,7 +256,7 @@ fun HomeScreen(
     }
 
     Box(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize().then(homeDimmingModifier())
     ) {
         when {
             !uiState.layoutPreferencesReady -> {

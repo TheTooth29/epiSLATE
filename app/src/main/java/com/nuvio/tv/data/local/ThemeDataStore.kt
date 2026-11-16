@@ -28,6 +28,34 @@ class ThemeDataStore @Inject constructor(
     private fun store(profileId: Int = profileManager.activeProfileId.value) =
         factory.get(profileId, FEATURE)
 
+    private val homeDimmingModeKey = stringPreferencesKey("home_dimming_mode")
+    private val homeDimmingStartKey = androidx.datastore.preferences.core.intPreferencesKey("home_dimming_start")
+    private val homeDimmingEndKey = androidx.datastore.preferences.core.intPreferencesKey("home_dimming_end")
+    private val homeDimmingStrengthKey = androidx.datastore.preferences.core.intPreferencesKey("home_dimming_strength")
+
+    val homeDimming: Flow<com.nuvio.tv.domain.model.HomeDimmingSettings> =
+        profileManager.activeProfileId.flatMapLatest { pid ->
+            factory.get(pid, FEATURE).data.map { prefs ->
+                com.nuvio.tv.domain.model.HomeDimmingSettings(
+                    mode = com.nuvio.tv.domain.model.HomeDimmingMode.entries.firstOrNull {
+                        it.name == prefs[homeDimmingModeKey]
+                    } ?: com.nuvio.tv.domain.model.HomeDimmingMode.OFF,
+                    startMinute = (prefs[homeDimmingStartKey] ?: 1260).coerceIn(0, 1439),
+                    endMinute = (prefs[homeDimmingEndKey] ?: 420).coerceIn(0, 1439),
+                    strengthPercent = (prefs[homeDimmingStrengthKey] ?: 50).coerceIn(10, 70)
+                )
+            }
+        }
+
+    suspend fun setHomeDimming(settings: com.nuvio.tv.domain.model.HomeDimmingSettings) {
+        store().edit { prefs ->
+            prefs[homeDimmingModeKey] = settings.mode.name
+            prefs[homeDimmingStartKey] = settings.startMinute.coerceIn(0, 1439)
+            prefs[homeDimmingEndKey] = settings.endMinute.coerceIn(0, 1439)
+            prefs[homeDimmingStrengthKey] = settings.strengthPercent.coerceIn(10, 70)
+        }
+    }
+
     private val themeKey = stringPreferencesKey("selected_theme")
     private val customThemeColorsKey = stringPreferencesKey("custom_theme_colors")
     private val fontKey = stringPreferencesKey("selected_font")
