@@ -110,7 +110,7 @@ class LiveTvPlaybackController @Inject constructor(
     }
 
     /** Starts saving the catch-up at [url] and plays it from the device once the first part is in. */
-    private fun startReplayCache(channel: LiveChannel, url: String): Boolean {
+    private fun startReplayCache(channel: LiveChannel, url: String, startPaused: Boolean = false): Boolean {
         val p = _player ?: return false
         replayCache.baseDir = timeshift.baseDir
         if (!replayCache.hasRoomFor(120)) return false
@@ -134,8 +134,9 @@ class LiveTvPlaybackController @Inject constructor(
                 replayLocal = true
                 p.setMediaSource(localRecordingSource(session.playUri), 0L)
             }
+            if (stoppedForBackground) return@launch
+            p.playWhenReady = !startPaused
             p.prepare()
-            p.playWhenReady = true
         }
         return true
     }
@@ -177,7 +178,7 @@ class LiveTvPlaybackController @Inject constructor(
      * recording a few seconds behind live, so you can skip back at any time (up to the buffer
      * length) without having paused. One connection to the provider, as always.
      */
-    private fun startAlwaysBuffer(channel: LiveChannel, url: String): Boolean {
+    private fun startAlwaysBuffer(channel: LiveChannel, url: String, startPaused: Boolean = false): Boolean {
         val p = _player ?: return false
         val session = timeshift.start(url, channel.headers, timeshiftMinutes) ?: return false
         alwaysBuffer = true
@@ -192,8 +193,9 @@ class LiveTvPlaybackController @Inject constructor(
             if (timeshift.session != session) return@launch
             if (!f.exists()) { bufferFailed(); return@launch }
             p.setMediaSource(localRecordingSource(session.playUri))
+            if (stoppedForBackground) return@launch
+            p.playWhenReady = !startPaused
             p.prepare()
-            p.playWhenReady = true
             shiftPrepared = true
         }
         return true
@@ -669,13 +671,13 @@ class LiveTvPlaybackController @Inject constructor(
         if (catchupTitle == null) markStarting(channel.key)
         if (bufferFailedKey != null && bufferFailedKey != channel.key) bufferFailedKey = null
         // Rewind anytime (full screen): play through the rolling buffer instead.
-        if (!startPaused && shouldBuffer(channel, catchupTitle)) {
+        if (shouldBuffer(channel, catchupTitle)) {
             p.stop()
-            if (startAlwaysBuffer(channel, url)) { p.playWhenReady = true; return }
+            if (startAlwaysBuffer(channel, url, startPaused)) { p.playWhenReady = !startPaused; return }
         }
         // A TS catch-up replay: saved while it plays, for instant skipping.
-        if (!startPaused && catchupTitle != null && catchupCache && channel.drm == null &&
-            !url.substringBefore('?').endsWith(".m3u8", ignoreCase = true) && startReplayCache(channel, url)
+        if (catchupTitle != null && catchupCache && channel.drm == null &&
+            !url.substringBefore('?').endsWith(".m3u8", ignoreCase = true) && startReplayCache(channel, url, startPaused)
         ) return
         archiveStartPending = catchupTitle != null
         p.setMediaSource(buildMediaSource(url, channel.headers, isLive = catchupTitle == null))
