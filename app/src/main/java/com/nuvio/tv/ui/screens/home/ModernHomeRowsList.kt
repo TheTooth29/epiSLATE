@@ -461,8 +461,8 @@ internal fun ModernHomeRowsList(
                             val bottomRow = verticalRowListState.layoutInfo.visibleItemsInfo.lastOrNull {
                                 it.offset < rowsViewportHeight.toPx() && it.offset + it.size > 0
                             }
-                            val fade = rowIndex != carouselRows.list.lastIndex &&
-                                bottomRow?.index == rowIndex && activeRowKey.value != row.key
+                            // Every bottom row dims until it receives focus, including the final row.
+                            val fade = bottomRow?.index == rowIndex && activeRowKey.value != row.key
                             // Match the existing partially clipped homepage tile treatment.
                             alpha = if (fade) 0.25f else 1f
                         } else alpha = 1f
