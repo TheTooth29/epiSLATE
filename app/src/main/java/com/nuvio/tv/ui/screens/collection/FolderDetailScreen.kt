@@ -984,6 +984,7 @@ private fun FollowLayoutContent(
             }
         }
         HomeLayout.MODERN -> ModernHomeContent(
+            fadeCollectionBottomRow = true,
             uiState = homeState,
             modernPresentation = homeState.modernHomePresentation,
             focusState = focusState,

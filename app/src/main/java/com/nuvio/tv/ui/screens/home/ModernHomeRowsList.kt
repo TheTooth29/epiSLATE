@@ -29,6 +29,10 @@ import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.focus.FocusRequester
@@ -79,6 +83,7 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun ModernHomeRowsList(
     rowsOnlyHomepage: Boolean = false,
+    fadeCollectionBottomRow: Boolean = false,
     isVerticalRowsScrollingState: State<Boolean>,
     carouselRows: StableList<HeroCarouselRow>,
     verticalRowListState: LazyListState,
@@ -310,7 +315,31 @@ internal fun ModernHomeRowsList(
                     val top = focusedRow?.offset?.toFloat()?.coerceIn(0f, bottom) ?: 0f
                     clipRect(top = top, bottom = bottom) { this@drawWithContent.drawContent() }
                 } else Modifier)
-                .graphicsLayer { alpha = trailerContentAlpha() }
+                // Fade the lowest visible collection row, never the final or focused row.
+                .graphicsLayer {
+                    alpha = trailerContentAlpha()
+                    if (fadeCollectionBottomRow) compositingStrategy = CompositingStrategy.Offscreen
+                }
+                .then(if (fadeCollectionBottomRow) Modifier.drawWithContent {
+                    drawContent()
+                    val visible = verticalRowListState.layoutInfo.visibleItemsInfo
+                        .filter { it.offset < size.height && it.offset + it.size > 0 }
+                    val bottomRow = visible.lastOrNull()
+                    val focusedIndex = carouselRows.list.indexOfFirst { it.key == activeRowKey.value }
+                    if (bottomRow != null && bottomRow.index < carouselRows.list.lastIndex &&
+                        bottomRow.index != focusedIndex && visible.size > 1) {
+                        val start = bottomRow.offset.toFloat().coerceAtLeast(0f)
+                        val end = (bottomRow.offset + bottomRow.size).toFloat().coerceAtMost(size.height)
+                        if (end > start) drawRect(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(Color.Black, Color.Black.copy(alpha = 0.25f)),
+                                startY = start,
+                                endY = end
+                            ),
+                            blendMode = BlendMode.DstIn
+                        )
+                    }
+                } else Modifier)
                 .focusRequester(contentFocusRequester)
                 .focusRestorer { focusRestorerRequester() }
                 .onPreviewKeyEvent { event ->

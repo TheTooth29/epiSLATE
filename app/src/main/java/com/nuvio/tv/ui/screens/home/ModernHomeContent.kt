@@ -146,7 +146,8 @@ fun ModernHomeContent(
     onRequestLazyCatalogLoad: (String) -> Unit = {},
     onRowItemFocusedCallback: (String, Int, Boolean) -> Unit = { _, _, _ -> },
     blockLeftOnFirstExpandedItem: Boolean = false,
-    rowsOnlyHomepage: Boolean = false
+    rowsOnlyHomepage: Boolean = false,
+    fadeCollectionBottomRow: Boolean = false
 ) {
     val onRowItemFocusedPassedDown = rememberUpdatedState(onRowItemFocusedCallback)
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
@@ -1270,6 +1271,7 @@ fun ModernHomeContent(
 
             ModernHomeRowsList(
                 rowsOnlyHomepage = rowsOnlyHomepage,
+                fadeCollectionBottomRow = fadeCollectionBottomRow,
                 carouselRows = carouselRows,
                 verticalRowListState = verticalRowListState,
                 focusedItemByRow = stableFocusedItemByRow,
