@@ -29,10 +29,6 @@ import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.focus.FocusRequester
@@ -315,31 +311,7 @@ internal fun ModernHomeRowsList(
                     val top = focusedRow?.offset?.toFloat()?.coerceIn(0f, bottom) ?: 0f
                     clipRect(top = top, bottom = bottom) { this@drawWithContent.drawContent() }
                 } else Modifier)
-                // Fade the lowest visible collection row, never the final or focused row.
-                .graphicsLayer {
-                    alpha = trailerContentAlpha()
-                    if (fadeCollectionBottomRow) compositingStrategy = CompositingStrategy.Offscreen
-                }
-                .then(if (fadeCollectionBottomRow) Modifier.drawWithContent {
-                    drawContent()
-                    val visible = verticalRowListState.layoutInfo.visibleItemsInfo
-                        .filter { it.offset < size.height && it.offset + it.size > 0 }
-                    val bottomRow = visible.lastOrNull()
-                    val focusedIndex = carouselRows.list.indexOfFirst { it.key == activeRowKey.value }
-                    if (bottomRow != null && bottomRow.index < carouselRows.list.lastIndex &&
-                        bottomRow.index != focusedIndex && visible.size > 1) {
-                        val start = bottomRow.offset.toFloat().coerceAtLeast(0f)
-                        val end = (bottomRow.offset + bottomRow.size).toFloat().coerceAtMost(size.height)
-                        if (end > start) drawRect(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(Color.Black, Color.Black.copy(alpha = 0.25f)),
-                                startY = start,
-                                endY = end
-                            ),
-                            blendMode = BlendMode.DstIn
-                        )
-                    }
-                } else Modifier)
+                .graphicsLayer { alpha = trailerContentAlpha() }
                 .focusRequester(contentFocusRequester)
                 .focusRestorer { focusRestorerRequester() }
                 .onPreviewKeyEvent { event ->
@@ -483,7 +455,19 @@ internal fun ModernHomeRowsList(
                         }
                     }
                 }
-                androidx.compose.foundation.layout.Column {
+                androidx.compose.foundation.layout.Column(
+                    modifier = Modifier.graphicsLayer {
+                        if (fadeCollectionBottomRow) {
+                            val bottomRow = verticalRowListState.layoutInfo.visibleItemsInfo.lastOrNull {
+                                it.offset < rowsViewportHeight.toPx() && it.offset + it.size > 0
+                            }
+                            val fade = rowIndex != carouselRows.list.lastIndex &&
+                                bottomRow?.index == rowIndex && activeRowKey.value != row.key
+                            // Match the existing partially clipped homepage tile treatment.
+                            alpha = if (fade) 0.25f else 1f
+                        } else alpha = 1f
+                    }
+                ) {
                 if (liveTvHere && (liveTvRowAbove == true || !hasContinueWatching)) {
                     com.nuvio.tv.livetv.home.LiveTvHomeRow(hideUnlessFocused = true, above = liveTvRowAbove == true, startPadding = 52.dp, titleStyle = androidx.tv.material3.MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
                 }
