@@ -26,3 +26,7 @@ Visual verification: header balance at TV resolution; Modern collection navigati
 ## Release boundaries
 
 No merge into dev, package rename, signing change, Beta 3 publishing, tag, Downloader replacement, or trial/activation work is authorized by this implementation request. A distributable test build is a separate step after source checks. Build/install/device-test coordination belongs in the Builds, installs & testing chat with an exact reviewed commit and this checklist carried over.
+
+## Automated validation result
+
+Validated source commit: `ed54dfa` on `work/next-release-features`. Full Debug app compilation and the five selected JUnit classes passed: 16 tests, zero failures/errors/skips. Coverage includes the new scheduling/lifecycle policies and existing startup, first-frame codec recovery, and audio fallback policies. The personal customization checker and diff whitespace check also passed. Android/TV visual checks, repeated SmartTube switches, surround-format checks, and an actual install/upgrade of a newly packaged APK remain pending. No APK was packaged, merged, tagged, or published by this work.
