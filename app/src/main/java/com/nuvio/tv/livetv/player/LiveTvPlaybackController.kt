@@ -932,6 +932,8 @@ class LiveTvPlaybackController @Inject constructor(
         stoppedForBackground = true
         backgroundPositionMs = backgroundResumeSeekMs ?: p.currentPosition.coerceAtLeast(0L)
         shiftJob?.cancel()
+        replayJob?.cancel()
+        replayJob = null
         p.playWhenReady = false
         p.setAudioAttributes(p.audioAttributes, false)
         reconnectJob?.cancel()
@@ -1002,6 +1004,16 @@ class LiveTvPlaybackController @Inject constructor(
                 p.playWhenReady = false
                 _recordingPlayback.value?.let { playlist ->
                     p.setMediaSource(localRecordingSource(android.net.Uri.fromFile(playlist), 15_000))
+                }
+                val preparationWasPending = (replayCache.session != null && !replayLocal) ||
+                    (_shiftStartedAt.value != null && !shiftPrepared) || p.mediaItemCount == 0
+                val channel = currentChannel
+                if (preparationWasPending && channel != null && _recordingPlayback.value == null) {
+                    val url = currentUrl
+                    val title = _state.value.catchupTitle
+                    play(channel, overrideUrl = url, catchupTitle = title, catchupStartMs = archiveStartWallMs,
+                        startPaused = true, resumePositionMs = backgroundPositionMs.takeIf { title != null })
+                    return
                 }
                 if (_state.value.catchupTitle == null && _recordingPlayback.value == null && _shiftStartedAt.value == null) {
                     p.seekToDefaultPosition()
