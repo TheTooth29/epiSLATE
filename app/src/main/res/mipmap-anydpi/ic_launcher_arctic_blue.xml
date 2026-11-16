@@ -1,7 +1,5 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="48dp" android:height="48dp"
-    android:viewportWidth="192" android:viewportHeight="192">
-    <!-- Match the navy and off-white of the approved epiSLATE wordmark artwork. -->
-    <path android:fillColor="#101D36" android:pathData="M0,0H192V192H0Z" />
-    <path android:fillColor="#F3F5FA" android:pathData="M56,37L156,96L56,155Z" />
-</vector>
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Reuse the approved normal epiSLATE logo for circular launcher tiles. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/epislate_installer_icon"
+    android:inset="0dp" />
