@@ -721,9 +721,14 @@ fun ModernHomeContent(
             val wordmarkWidth = 126.72.dp
             val wordmarkHeight = wordmarkWidth * (44f / 200f)
             val clockSlateOffset = wordmarkHeight * (18f / 44f - 0.5f)
+            // Center the wordmark in the space above the first row's artwork.
+            // Keep the clock aligned with SLATE as both move together.
+            val headerTitleHeight = with(LocalDensity.current) { 19.sp.toDp() }
+            val firstRowArtworkTop = screenHeight * 0.08f + headerTitleHeight + 6.dp
+            val headerTop = ((firstRowArtworkTop - wordmarkHeight) / 2).coerceAtLeast(0.dp)
             androidx.compose.foundation.layout.Row(
                 modifier = Modifier.align(Alignment.TopEnd)
-                    .padding(top = 12.dp, end = 32.dp)
+                    .padding(top = headerTop, end = 32.dp)
                     .zIndex(2f),
                 verticalAlignment = Alignment.CenterVertically
             ) {
