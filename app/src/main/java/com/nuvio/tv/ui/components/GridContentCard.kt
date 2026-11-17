@@ -83,6 +83,7 @@ fun GridContentCard(
     showYearOnly: Boolean = false,
     yearLabelOverride: String? = null,
     subtleReleaseDate: Boolean = false,
+    releaseLabelTopPadding: androidx.compose.ui.unit.Dp = 2.dp,
     onFocused: () -> Unit = {}
 ) {
     val cardShape = remember(posterCardStyle.cornerRadius) { RoundedCornerShape(posterCardStyle.cornerRadius) }
@@ -390,7 +391,7 @@ fun GridContentCard(
         releaseLabel?.let { info ->
             val labelModifier = Modifier
                 .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
-                .padding(top = 2.dp, start = NuvioTheme.spacing.xxs, end = NuvioTheme.spacing.xxs)
+                .padding(top = releaseLabelTopPadding, start = NuvioTheme.spacing.xxs, end = NuvioTheme.spacing.xxs)
             if (showYearOnly) {
                 Text(
                     text = info,

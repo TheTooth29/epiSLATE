@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -57,7 +60,6 @@ import com.nuvio.tv.ui.util.dpadRepeatThrottle
 import com.nuvio.tv.ui.util.dpadVerticalFastScroll
 import com.nuvio.tv.ui.util.localizedContentType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
@@ -734,12 +736,15 @@ private fun PreviewTabbedGridContent(
             androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
             val gap = NuvioTheme.spacing.lg
             val inset = NuvioTheme.spacing.xxxl
-            val rowHeight = if (mode == TabbedGridPreview.CENTERED) (maxHeight - 24.dp) * 0.60f else (maxHeight - 24.dp - gap * (mode.rows - 1)) / mode.rows
-            val availableWidth = (maxWidth - inset * 2 - gap * (mode.columns - 1)) / mode.columns
-            val globalLandscapePreview = LocalLandscapePosterMode.current
-            val cardWidth = if (globalLandscapePreview) {
-                minOf(availableWidth / 1.5f, (rowHeight - 48.dp) * (16f / 9f))
-            } else minOf(availableWidth, (rowHeight - 48.dp) / 1.5f)
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val dateTopPadding = 10.dp
+            val dateHeight = with(density) { MaterialTheme.typography.labelMedium.lineHeight.toDp() }
+            val geometry = tabbedGridPreviewGeometry(
+                mode, maxWidth.value, maxHeight.value, (dateTopPadding + dateHeight).value,
+                LocalLandscapePosterMode.current, inset.value, gap.value
+            )
+            val rowHeight = geometry.rowHeight.dp
+            val cardWidth = geometry.cardWidth.dp
             val posterCardStyle = PosterCardStyle(
                 width = cardWidth.coerceAtLeast(24.dp),
                 height = (cardWidth * 1.5f).coerceAtLeast(36.dp),
@@ -841,7 +846,9 @@ private fun PreviewTabbedGridContent(
                 state = gridState,
                 columns = GridCells.Fixed(mode.columns),
                 modifier = Modifier
-                    .fillMaxSize()
+                    .height(geometry.gridHeight.dp)
+                    .fillMaxWidth()
+                    .align(Alignment.Center)
                     .onFocusChanged { gridHasFocus = it.hasFocus }
                     .focusRestorer {
                         lastFocusedItemKey?.let { itemFocusRequesters[it] } ?: FocusRequester.Default
@@ -850,8 +857,8 @@ private fun PreviewTabbedGridContent(
                 contentPadding = PaddingValues(
                     start = NuvioTheme.spacing.xxxl,
                     end = NuvioTheme.spacing.xxxl,
-                    top = if (mode == TabbedGridPreview.CENTERED) (maxHeight - rowHeight) / 2 else 12.dp,
-                    bottom = if (mode == TabbedGridPreview.CENTERED) (maxHeight - rowHeight) / 2 else 12.dp + pageBottomPadding
+                    top = 12.dp,
+                    bottom = 12.dp + pageBottomPadding
                 ),
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg),
                 verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
@@ -867,14 +874,12 @@ private fun PreviewTabbedGridContent(
                         if (useDigitalDate) value = loadUsDigitalDate?.invoke(item.id)
                     }
                     GridContentCard(
-                        modifier = Modifier.height(rowHeight).then(
-                            if (mode == TabbedGridPreview.CENTERED && focusedIndex >= 0 && index / mode.columns != focusedIndex / mode.columns)
-                                Modifier.alpha(0.35f) else Modifier
-                        ),
+                        modifier = Modifier.height(rowHeight),
                         item = item,
                         yearLabelOverride = (if (item.apiType == "series") formatGridReleaseDate(item.released) else digitalDate)
                             ?.uppercase(java.util.Locale.US),
                         subtleReleaseDate = true,
+                        releaseLabelTopPadding = dateTopPadding,
                         posterCardStyle = posterCardStyle,
                         focusRequester = focusReq,
                         isWatched = isItemWatched(item),
@@ -949,6 +954,26 @@ private fun PreviewTabbedGridContent(
                     }
                 }
             }
+            }
+            if (mode == TabbedGridPreview.CENTERED) {
+                val activeRow = (focusedIndex.takeIf { it >= 0 } ?: (tabFocusState.focusedItemKey
+                    ?.substringAfterLast('_')?.toIntOrNull() ?: tabFocusState.verticalScrollIndex)) / mode.columns
+                if (activeRow > 0) {
+                    androidx.tv.material3.Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.KeyboardArrowUp,
+                        contentDescription = "More titles above",
+                        tint = NuvioTheme.colors.TextSecondary.copy(alpha = 0.35f),
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp).size(24.dp)
+                    )
+                }
+                if ((activeRow + 1) * mode.columns < items.size || catalogRow.hasMore) {
+                    androidx.tv.material3.Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.KeyboardArrowDown,
+                        contentDescription = "More titles below",
+                        tint = NuvioTheme.colors.TextSecondary.copy(alpha = 0.35f),
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp).size(24.dp)
+                    )
+                }
             }
             }
             }

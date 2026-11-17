@@ -7,9 +7,13 @@ import kotlinx.coroutines.flow.asStateFlow
 internal enum class TabbedGridPreview(val label: String, val columns: Int, val rows: Int) {
     ORIGINAL("Original", 6, 2),
     TWO_ROWS("Two full rows", 6, 2),
-    THREE_ROWS("Three full rows", 8, 3),
     PAGES("Page by page", 6, 2),
-    CENTERED("Centered preview", 6, 1);
+    CENTERED("Centered preview", 5, 1);
+
+    companion object {
+        fun fromStored(value: String?): TabbedGridPreview =
+            entries.firstOrNull { it.name == value } ?: ORIGINAL
+    }
 
     fun firstRow(focusedRow: Int, currentFirstRow: Int): Int = when (this) {
         PAGES -> focusedRow / rows * rows
@@ -22,12 +26,29 @@ internal enum class TabbedGridPreview(val label: String, val columns: Int, val r
     }.coerceAtLeast(0)
 }
 
+internal data class TabbedGridPreviewGeometry(val cardWidth: Float, val rowHeight: Float, val gridHeight: Float)
+
+internal fun tabbedGridPreviewGeometry(
+    mode: TabbedGridPreview, width: Float, height: Float, metadataHeight: Float,
+    landscape: Boolean, inset: Float = 48f, gap: Float = 16f
+): TabbedGridPreviewGeometry {
+    val centered = mode == TabbedGridPreview.CENTERED
+    // Preserve the existing 12dp vertical inset; leave space outside the centered viewport for arrows.
+    val maximumRowHeight = if (centered) height - 24f - 72f
+        else (height - 24f - gap * (mode.rows - 1)) / mode.rows
+    val columnWidth = (width - inset * 2 - gap * (mode.columns - 1)) / mode.columns
+    val widthScale = if (landscape) 1.5f else 1f
+    val heightScale = if (landscape) 1.5f / (16f / 9f) else 1.5f
+    val cardWidth = minOf(columnWidth / widthScale, (maximumRowHeight - metadataHeight) / heightScale)
+        .coerceAtLeast(1f)
+    val rowHeight = if (centered) cardWidth * heightScale + metadataHeight else maximumRowHeight
+    return TabbedGridPreviewGeometry(cardWidth, rowHeight, if (centered) rowHeight + 24f else height)
+}
+
 /** Deliberately separate from production preferences and restricted to the Test package. */
 internal class TabbedGridPreviewStore private constructor(context: Context) {
     private val preferences = context.getSharedPreferences("tabbed_grid_preview", Context.MODE_PRIVATE)
-    private val _mode = MutableStateFlow(runCatching {
-        TabbedGridPreview.valueOf(preferences.getString("mode", null) ?: "ORIGINAL")
-    }.getOrDefault(TabbedGridPreview.ORIGINAL))
+    private val _mode = MutableStateFlow(TabbedGridPreview.fromStored(preferences.getString("mode", null)))
     val mode = _mode.asStateFlow()
 
     fun select(mode: TabbedGridPreview) {
