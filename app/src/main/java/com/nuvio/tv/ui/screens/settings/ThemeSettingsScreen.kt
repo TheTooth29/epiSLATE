@@ -7,7 +7,6 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
-import android.os.Process
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
@@ -68,7 +67,6 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.R
-import com.nuvio.tv.domain.model.AppIconOption
 import com.nuvio.tv.domain.model.AppTheme
 import com.nuvio.tv.domain.model.CustomThemeColors
 import com.nuvio.tv.domain.model.SettingsUiStyle
@@ -101,13 +99,10 @@ fun ThemeSettingsContent(
     initialFocusRequester: FocusRequester? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val appIconState by viewModel.appIconState.collectAsStateWithLifecycle()
     var showFontDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
-    var showAppIconDialog by remember { mutableStateOf(false) }
     var showCustomThemeDialog by remember(uiState.customThemeGradientEnabled) { mutableStateOf(false) }
     var restoreCustomThemeFocus by remember { mutableStateOf(false) }
-    var appIconConfirmation by remember { mutableStateOf<AppIconOption?>(null) }
     var pendingLanguageRestart by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
@@ -290,23 +285,6 @@ fun ThemeSettingsContent(
                 }
             }
 
-            SettingsGroupCard(
-                modifier = Modifier.fillMaxWidth(),
-                title = stringResource(R.string.appearance_launcher_artwork),
-                subtitle = stringResource(R.string.appearance_launcher_artwork_subtitle)
-            ) {
-                SettingsActionRow(
-                    title = stringResource(R.string.appearance_app_icon_and_banner),
-                    subtitle = stringResource(R.string.appearance_app_icon_and_banner_subtitle),
-                    value = appIconState.selected.localizedName(),
-                    enabled = appIconState.pending == null,
-                    onClick = {
-                        viewModel.onEvent(ThemeSettingsEvent.DismissAppIconFailure)
-                        showAppIconDialog = true
-                    }
-                )
-            }
-
             HomeDimmingSettingsCard()
 
             AmbientModeSettingsCard()
@@ -384,37 +362,6 @@ fun ThemeSettingsContent(
             onDismiss = { showLanguageDialog = false },
             width = 400.dp,
             maxHeight = 280.dp
-        )
-    }
-
-    if (showAppIconDialog && appIconConfirmation == null) {
-        AppIconPickerDialog(
-            state = appIconState,
-            onSelected = { option ->
-                viewModel.onEvent(ThemeSettingsEvent.DismissAppIconFailure)
-                if (option != appIconState.selected) {
-                    appIconConfirmation = option
-                }
-            },
-            onDismiss = {
-                viewModel.onEvent(ThemeSettingsEvent.DismissAppIconFailure)
-                showAppIconDialog = false
-            },
-            onToggleIptv = { viewModel.setIptvBranding(it) }
-        )
-    }
-
-    appIconConfirmation?.let { option ->
-        AppIconChangeConfirmationDialog(
-            option = option,
-            onConfirm = {
-                appIconConfirmation = null
-                if (viewModel.selectAppIcon(option)) {
-                    context.findActivity()?.finishAffinity()
-                    Process.killProcess(Process.myPid())
-                }
-            },
-            onDismiss = { appIconConfirmation = null }
         )
     }
 }
