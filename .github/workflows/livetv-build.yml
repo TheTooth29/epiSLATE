@@ -27,6 +27,7 @@ jobs:
       - name: Check personal customizations
         run: |
           python3 scripts/check-personal-customizations.py
+          python3 scripts/check-tabbed-grid-original.py
           python3 scripts/test_verify_android_upgrade.py
 
       - name: Set up Java
@@ -129,19 +130,20 @@ jobs:
       - name: Test updater, watched badges and beta regressions
         run: |
           chmod +x gradlew
-          ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' --tests 'com.nuvio.tv.core.auth.AccountLocalDataResetServiceTest' --tests 'com.nuvio.tv.core.tracking.NuvioWatchedEpisodeProjectionTest' --tests 'com.nuvio.tv.data.repository.WatchProgressRepositoryProfileIsolationTest' --tests 'com.nuvio.tv.ui.screens.home.SeriesBadgeRefreshTest' --tests 'com.nuvio.tv.ui.screens.home.HomeEnrichmentRetryTest' --tests 'com.nuvio.tv.ui.screens.home.ContinueWatchingAiringRulesTest' --tests 'com.nuvio.tv.ui.screens.home.HomeRowVisibilityTest' --tests 'com.nuvio.tv.domain.model.CollectionOrderingTest' --tests 'com.nuvio.tv.core.image.CollectionCoverPreviewTest' --tests 'com.nuvio.tv.ui.screens.collection.GridReleaseDateTest' --stacktrace -PlivetvTestBuild=${{ inputs.test_build == true }}
+          ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' --tests 'com.nuvio.tv.core.auth.AccountLocalDataResetServiceTest' --tests 'com.nuvio.tv.core.tracking.NuvioWatchedEpisodeProjectionTest' --tests 'com.nuvio.tv.data.repository.WatchProgressRepositoryProfileIsolationTest' --tests 'com.nuvio.tv.ui.screens.home.SeriesBadgeRefreshTest' --tests 'com.nuvio.tv.ui.screens.home.HomeEnrichmentRetryTest' --tests 'com.nuvio.tv.ui.screens.home.ContinueWatchingAiringRulesTest' --tests 'com.nuvio.tv.ui.screens.home.HomeRowVisibilityTest' --tests 'com.nuvio.tv.domain.model.CollectionOrderingTest' --tests 'com.nuvio.tv.core.image.CollectionCoverPreviewTest' --tests 'com.nuvio.tv.ui.screens.collection.GridReleaseDateTest' --tests 'com.nuvio.tv.domain.model.HomeDimmingSettingsTest' --tests 'com.nuvio.tv.ui.screens.player.AppBackgroundStopTest' --tests 'com.nuvio.tv.ui.screens.player.PlayerStartupPlaybackPolicyTest' --tests 'com.nuvio.tv.ui.screens.player.PlayerFirstFrameCodecRecoveryPolicyTest' --tests 'com.nuvio.tv.ui.screens.player.PlayerAudioFallbackPolicyTest' --tests 'com.nuvio.tv.ui.screens.collection.TabbedGridPreviewTest' --stacktrace -PlivetvTestBuild=${{ inputs.test_build == true }}
 
       - name: Build signed APK after tests pass
         run: |
           chmod +x gradlew
           ./gradlew :app:assembleFullRelease --stacktrace -PlivetvTestBuild=${{ inputs.test_build == true }}
 
-      - name: Verify regular Beta 3 updates Beta 2 in place
+      - name: Verify regular Beta 4 updates Beta 3 in place
         if: ${{ !inputs.test_build }}
         run: |
           set -euo pipefail
-          previous="$RUNNER_TEMP/epiSLATE-beta-2.apk"
-          curl --fail --location --retry 3 --output "$previous" 'https://github.com/TheTooth29/epiSLATE/releases/download/v1.0.0-beta.2/epiSLATE-1.0.0-beta.2-universal-release.apk'
+          previous="$RUNNER_TEMP/epiSLATE-beta-3.apk"
+          curl --fail --location --retry 3 --output "$previous" 'https://github.com/TheTooth29/epiSLATE/releases/download/downloader/epiSLATE.apk'
+          echo "e76f07f0e120ebb2f84c6e0da7875c3e1ea7ae2f49ef8ad0108608c9f2723b06  $previous" | sha256sum --check
           aapt=$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -V | tail -n 1)
           apksigner=$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -n 1)
           test -n "$aapt" && test -n "$apksigner"
@@ -157,7 +159,7 @@ jobs:
           mkdir -p out
           for apk in app/build/outputs/apk/full/release/*.apk; do
             filename=$(basename "$apk")
-            cp "$apk" "out/epiSLATE-1.0.0-beta.3-${filename#app-full-}"
+            cp "$apk" "out/epiSLATE-1.0.0-beta.4-${filename#app-full-}"
           done
           ls -la out
 
@@ -263,10 +265,10 @@ jobs:
           make_latest: false
           body: |
             ## epiSLATE Beta
-            Version: **1.0.0-beta.3**
+            Version: **1.0.0-beta.4**
 
-            Third epiSLATE beta for Android TV and Google TV.
-            Restores watched-series checkmarks after Nuvio sync, adds a centered startup update dialog, and keeps Test builds separate from regular-release updates. These fixes passed owner TV testing before merging into dev.
+            Fourth epiSLATE beta for Android TV and Google TV.
+            Adds background playback cleanup, configurable home dimming, default double-Back exit, refined header and Modern collection fading, corrected app icons, and simplified Appearance settings. Original Tabbed Grid is preserved in the regular app; comparison layouts remain Test-only. Based on owner-tested PR #28.
 
             Download the **universal** APK below if you are unsure which version to install.
             This beta has no trial expiration or activation requirement.
