@@ -1,0 +1,28 @@
+package com.nuvio.tv.ui.screens.settings
+
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import com.nuvio.tv.ui.screens.collection.TabbedGridPreview
+import com.nuvio.tv.ui.screens.collection.TabbedGridPreviewStore
+
+@Composable
+internal fun TabbedGridPreviewSettingsCard() {
+    val context = LocalContext.current
+    if (!TabbedGridPreviewStore.isTestPackage(context.packageName)) return
+    val store = remember(context) { TabbedGridPreviewStore.get(context) }
+    val mode by store.mode.collectAsState()
+    var showPicker by remember { mutableStateOf(false) }
+    SettingsGroupCard(
+        title = "Tabbed Grid preview · Test app",
+        subtitle = "Compare collection layouts. Original restores the current layout. Each choice remembers its position."
+    ) {
+        SettingsActionRow(title = "Layout", subtitle = null, value = mode.label, onClick = { showPicker = true })
+    }
+    if (showPicker) SettingsSingleChoiceDialog(
+        title = "Tabbed Grid layout",
+        options = TabbedGridPreview.entries.map { SettingsPickerOption(it, it.label) },
+        selectedValue = mode,
+        onOptionSelected = { store.select(it); showPicker = false },
+        onDismiss = { showPicker = false }
+    )
+}

@@ -285,6 +285,8 @@ fun ThemeSettingsContent(
                 }
             }
 
+            TabbedGridPreviewSettingsCard()
+
             HomeDimmingSettingsCard()
 
             AmbientModeSettingsCard()
