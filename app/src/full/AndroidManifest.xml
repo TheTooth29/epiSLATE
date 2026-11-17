@@ -6,7 +6,11 @@
     <!-- Lets the in-app updater install its own updates without a confirmation screen on Android 12+. -->
     <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
 
-    <application android:icon="@drawable/epislate_installer_icon" tools:replace="android:icon">
+    <!-- Standard raster package icons for Android Settings; launcher activity artwork stays separate. -->
+    <application
+        android:icon="@mipmap/epislate_app_icon"
+        android:roundIcon="@mipmap/epislate_app_icon_round"
+        tools:replace="android:icon">
         <service
             android:name=".updater.UpdateJobService"
             android:exported="false"
