@@ -2,6 +2,7 @@
 """Fail an update build when a known personal customization is missing."""
 from pathlib import Path
 import sys
+import struct
 import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[1]
@@ -28,6 +29,19 @@ require("app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt",
 for workflow in [".github/workflows/pr-full-debug-build.yml", ".github/workflows/livetv-build.yml"]:
     require(workflow, "secrets.NUVIO_BACKEND_URL", "secrets.NUVIO_BACKEND_KEY", "secrets.TMDB_API_KEY",
             "add NUVIO_SUPABASE_URL", "add NUVIO_SUPABASE_ANON_KEY", "add TMDB_API_KEY")
+# Android Settings loads the application icon, independently of the TV launcher activity.
+# Use density-specific bitmap package icons for System UI compatibility.
+android = "{http://schemas.android.com/apk/res/android}"
+application = ET.parse(root / "app/src/full/AndroidManifest.xml").getroot().find("application")
+for attribute, resource in {"icon": "epislate_app_icon", "roundIcon": "epislate_app_icon_round"}.items():
+    if application is None or application.get(android + attribute) != "@mipmap/" + resource:
+        errors.append(f"full application {attribute} must use @mipmap/{resource}")
+    for density, size in {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}.items():
+        icon = root / f"app/src/full/res/mipmap-{density}/{resource}.png"
+        data = icon.read_bytes() if icon.exists() else b""
+        if len(data) < 24 or data[:8] != b"\x89PNG\r\n\x1a\n" or struct.unpack(">II", data[16:24]) != (size, size):
+            errors.append(f"{icon.relative_to(root)} must be a valid {size}x{size} PNG")
+
 if errors:
     print("\n".join(errors), file=sys.stderr)
     sys.exit(1)

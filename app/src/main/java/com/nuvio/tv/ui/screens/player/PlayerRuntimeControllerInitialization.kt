@@ -160,6 +160,7 @@ internal fun PlayerRuntimeController.initializePlayer(
         _uiState.update { it.copy(error = context.getString(R.string.player_error_no_stream_url), showLoadingOverlay = false) }
         return
     }
+    if (deferPlayerInitializationForBackground()) return
     mpvMediaLoadPrepared = false
     val afrPreflightToken = afrPreflightGate.token()
 
@@ -201,6 +202,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             configuredBackBufferMs = 0
 
             val playerSettings = playerSettingsDataStore.playerSettings.first()
+            if (deferPlayerInitializationForBackground()) return@launch
             currentPlayerSettingsForReport = playerSettings
             rememberAudioDelayPerDeviceEnabled = playerSettings.rememberAudioDelayPerDevice
             // Always watch output-device changes so Bluetooth connect/disconnect can switch
@@ -301,7 +303,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         message = context.getString(R.string.player_loading_buffering)
                     )
                     if (!afrPreflightGate.isCurrent(afrPreflightToken)) return@launch
-                    initializeMpvPlayer(url = url, headers = headers, allowEngineFailover = allowEngineFailover)
+                    initializeMpvPlayer(url = url, headers = headers, allowEngineFailover = allowEngineFailover, startPaused = startPaused)
                     fetchAddonSubtitles()
                 } finally {
                     mpvInitializationInProgress = false
@@ -1002,6 +1004,8 @@ internal fun PlayerRuntimeController.initializePlayer(
             disposeExoPlayerBeforeRebuild()
             delay(PLAYER_REBUILD_SETTLE_DELAY_MS)
             if (!afrPreflightGate.isCurrent(afrPreflightToken)) return@launch
+
+            if (deferPlayerInitializationForBackground()) return@launch
 
             _exoPlayer = if (useLibass) {
                 // Set libass render scale before building the player - this controls

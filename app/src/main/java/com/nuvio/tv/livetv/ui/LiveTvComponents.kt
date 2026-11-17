@@ -651,7 +651,8 @@ internal fun PauseLiveTvInBackground(playback: com.nuvio.tv.livetv.player.LiveTv
                 // Pause as soon as the app stops being the one in front (not only once it's fully
                 // hidden): some launchers, notably ones showing a live wallpaper, leave the app
                 // "visible behind" them, so it never got the fully-hidden signal and kept playing.
-                androidx.lifecycle.Lifecycle.Event.ON_PAUSE, androidx.lifecycle.Lifecycle.Event.ON_STOP -> playback.onAppBackground()
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> playback.onAppBackground()
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> playback.onAppStopped()
                 androidx.lifecycle.Lifecycle.Event.ON_RESUME -> playback.onAppForeground()
                 else -> Unit
             }

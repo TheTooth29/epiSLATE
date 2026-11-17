@@ -3415,4 +3415,13 @@
     <string name="update_preview_title">Preview update notification</string>
     <string name="update_test_manual_install">Test builds are installed manually. This preview will not download or install anything.</string>
     <string name="update_incompatible_apk">This APK is not a newer version of this app. No update was installed.</string>
+    <string name="home_dimming_title">Home screen dimming</string>
+    <string name="home_dimming_subtitle">Soften the home screen for a dark room. Playback brightness stays unchanged. Schedules use this TV’s local time; matching start and end times dim all day.</string>
+    <string name="home_dimming_mode">Dimming</string>
+    <string name="home_dimming_off">Off</string>
+    <string name="home_dimming_always">Always</string>
+    <string name="home_dimming_scheduled">Scheduled</string>
+    <string name="home_dimming_start">Start time</string>
+    <string name="home_dimming_end">End time</string>
+    <string name="home_dimming_strength">Dim level</string>
 </resources>

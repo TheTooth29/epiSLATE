@@ -110,7 +110,7 @@ class LiveTvPlaybackController @Inject constructor(
     }
 
     /** Starts saving the catch-up at [url] and plays it from the device once the first part is in. */
-    private fun startReplayCache(channel: LiveChannel, url: String): Boolean {
+    private fun startReplayCache(channel: LiveChannel, url: String, startPaused: Boolean = false): Boolean {
         val p = _player ?: return false
         replayCache.baseDir = timeshift.baseDir
         if (!replayCache.hasRoomFor(120)) return false
@@ -134,8 +134,9 @@ class LiveTvPlaybackController @Inject constructor(
                 replayLocal = true
                 p.setMediaSource(localRecordingSource(session.playUri), 0L)
             }
+            if (stoppedForBackground) return@launch
+            p.playWhenReady = !startPaused
             p.prepare()
-            p.playWhenReady = true
         }
         return true
     }
@@ -177,7 +178,7 @@ class LiveTvPlaybackController @Inject constructor(
      * recording a few seconds behind live, so you can skip back at any time (up to the buffer
      * length) without having paused. One connection to the provider, as always.
      */
-    private fun startAlwaysBuffer(channel: LiveChannel, url: String): Boolean {
+    private fun startAlwaysBuffer(channel: LiveChannel, url: String, startPaused: Boolean = false): Boolean {
         val p = _player ?: return false
         val session = timeshift.start(url, channel.headers, timeshiftMinutes) ?: return false
         alwaysBuffer = true
@@ -192,8 +193,9 @@ class LiveTvPlaybackController @Inject constructor(
             if (timeshift.session != session) return@launch
             if (!f.exists()) { bufferFailed(); return@launch }
             p.setMediaSource(localRecordingSource(session.playUri))
+            if (stoppedForBackground) return@launch
+            p.playWhenReady = !startPaused
             p.prepare()
-            p.playWhenReady = true
             shiftPrepared = true
         }
         return true
@@ -594,8 +596,11 @@ class LiveTvPlaybackController @Inject constructor(
         fallback: String? = null,
         fallbacks: List<String> = emptyList(),
         /** Catch-up: the real time the replay should start at (the show's start). */
-        catchupStartMs: Long? = null
+        catchupStartMs: Long? = null,
+        startPaused: Boolean = false,
+        resumePositionMs: Long? = null
     ) {
+        backgroundResumeSeekMs = resumePositionMs
         // Something chosen to play (back from the background through a launcher row, say):
         // that wins over picking up what was on before.
         resumeAfterBackground = null
@@ -631,6 +636,7 @@ class LiveTvPlaybackController @Inject constructor(
         if (catchupTitle != null) com.nuvio.tv.livetv.model.LiveTvLoadReport.add("Catch-up \"$catchupTitle\" on ${channel.name}: ${redact(url)}")
         startStallWatch()
         val p = _player ?: attach().also { attachCount-- }
+        p.playWhenReady = !startPaused
         // Captions follow the setting until you change them yourself on this channel. Without
         // this the player switched on captions a stream marks as "default" (ARD, ZDF…) a couple
         // of seconds in, even with captions off in Settings.
@@ -653,7 +659,7 @@ class LiveTvPlaybackController @Inject constructor(
         if (currentChannel?.key == channel.key && currentUrl == url && _state.value.error == null &&
             p.playbackState != Player.STATE_IDLE
         ) {
-            if (!p.isPlaying) p.play()
+            p.playWhenReady = !startPaused
             return
         }
         reconnectJob?.cancel()
@@ -667,16 +673,16 @@ class LiveTvPlaybackController @Inject constructor(
         // Rewind anytime (full screen): play through the rolling buffer instead.
         if (shouldBuffer(channel, catchupTitle)) {
             p.stop()
-            if (startAlwaysBuffer(channel, url)) { p.playWhenReady = true; return }
+            if (startAlwaysBuffer(channel, url, startPaused)) { p.playWhenReady = !startPaused; return }
         }
         // A TS catch-up replay: saved while it plays, for instant skipping.
         if (catchupTitle != null && catchupCache && channel.drm == null &&
-            !url.substringBefore('?').endsWith(".m3u8", ignoreCase = true) && startReplayCache(channel, url)
+            !url.substringBefore('?').endsWith(".m3u8", ignoreCase = true) && startReplayCache(channel, url, startPaused)
         ) return
         archiveStartPending = catchupTitle != null
         p.setMediaSource(buildMediaSource(url, channel.headers, isLive = catchupTitle == null))
         p.prepare()
-        p.playWhenReady = true
+        p.playWhenReady = !startPaused
     }
 
     /**
@@ -918,6 +924,29 @@ class LiveTvPlaybackController @Inject constructor(
      * is free for another device. A quick overlay (a voice search, a system message) doesn't
      * drop the channel; going to the launcher does. Scheduled recordings carry on.
      */
+    private var stoppedForBackground = false
+    private var backgroundPositionMs = 0L
+    private var backgroundResumeSeekMs: Long? = null
+
+    fun onAppStopped() {
+        val p = _player ?: return
+        if (stoppedForBackground) return
+        stoppedForBackground = true
+        backgroundPositionMs = backgroundResumeSeekMs ?: p.currentPosition.coerceAtLeast(0L)
+        shiftJob?.cancel()
+        replayJob?.cancel()
+        replayJob = null
+        p.playWhenReady = false
+        p.setAudioAttributes(p.audioAttributes, false)
+        reconnectJob?.cancel()
+        reconnectJob = null
+        stallJob?.cancel()
+        stallJob = null
+        // Stop releases audio tracks and decoders, including local-recording playback.
+        // The existing delayed provider/timeshift cleanup is left intact.
+        p.stop()
+    }
+
     fun onAppBackground() {
         val p = _player ?: return
         if (p.playWhenReady) {
@@ -937,23 +966,16 @@ class LiveTvPlaybackController @Inject constructor(
         // A recording on this device: nothing to let go of.
         if (_recordingPlayback.value != null) return
         if (resumeAfterBackground != null) return
-        val wasPlaying = pausedForBackground
         val url = currentUrl
         val title = _state.value.catchupTitle
         val start = archiveStartWallMs
         val pos = p.currentPosition
         resumeAfterBackground = {
             if (title != null) {
-                // Catch-up: the same replay, back where you were.
-                play(ch, url, title, catchupStartMs = start)
-                scope.launch {
-                    var waited = 0
-                    while (waited < 15_000 && _player?.playbackState != Player.STATE_READY) { delay(200); waited += 200 }
-                    _player?.let { pl -> if (pos > 0) pl.seekTo(pos); if (!wasPlaying) pl.pause() }
-                }
+                play(ch, url, title, catchupStartMs = start, startPaused = true, resumePositionMs = pos)
             } else {
                 currentUrl = null
-                play(ch, overrideUrl = url.takeIf { it != ch.url })
+                play(ch, overrideUrl = url.takeIf { it != ch.url }, startPaused = true)
             }
         }
         stopShift()
@@ -965,14 +987,44 @@ class LiveTvPlaybackController @Inject constructor(
         com.nuvio.tv.livetv.model.LiveTvLoadReport.add("App in the background: ${ch.name} stopped, so the line is free for another device")
     }
 
-    /** Back in the app: carry on, jumping to the live edge for live channels. */
+    /** Restore paused after a full background stop; transient overlays keep the old resume behavior. */
     fun onAppForeground() {
+        val stopped = stoppedForBackground
+        stoppedForBackground = false
+        _player?.let { it.setAudioAttributes(it.audioAttributes, true) }
         backgroundJob?.cancel()
         backgroundJob = null
         resumeAfterBackground?.let { r ->
             resumeAfterBackground = null
             pausedForBackground = false
             r()
+            return
+        }
+        if (stopped) {
+            pausedForBackground = false
+            _player?.let { p ->
+                p.playWhenReady = false
+                _recordingPlayback.value?.let { playlist ->
+                    p.setMediaSource(localRecordingSource(android.net.Uri.fromFile(playlist), 15_000))
+                }
+                val preparationWasPending = (replayCache.session != null && !replayLocal) ||
+                    (_shiftStartedAt.value != null && !shiftPrepared) || p.mediaItemCount == 0
+                val channel = currentChannel
+                if (preparationWasPending && channel != null && _recordingPlayback.value == null) {
+                    val url = currentUrl
+                    val title = _state.value.catchupTitle
+                    play(channel, overrideUrl = url, catchupTitle = title, catchupStartMs = archiveStartWallMs,
+                        startPaused = true, resumePositionMs = backgroundPositionMs.takeIf { title != null })
+                    return
+                }
+                if (_state.value.catchupTitle == null && _recordingPlayback.value == null && _shiftStartedAt.value == null) {
+                    p.seekToDefaultPosition()
+                } else {
+                    backgroundResumeSeekMs = backgroundPositionMs
+                    p.seekTo(backgroundPositionMs)
+                }
+                p.prepare()
+            }
             return
         }
         if (!pausedForBackground) return
@@ -1450,6 +1502,12 @@ class LiveTvPlaybackController @Inject constructor(
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState == Player.STATE_READY && !stoppedForBackground) {
+                backgroundResumeSeekMs?.let { position ->
+                    backgroundResumeSeekMs = null
+                    _player?.seekTo(position)
+                }
+            }
             _state.value = _state.value.copy(
                 isBuffering = playbackState == Player.STATE_BUFFERING,
                 error = if (playbackState == Player.STATE_READY) null else _state.value.error,
@@ -1495,6 +1553,7 @@ class LiveTvPlaybackController @Inject constructor(
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            if (stoppedForBackground) return
             // A recording that failed: back to live rather than reconnecting to nowhere.
             if (_shiftStartedAt.value != null && timeshift.isRecording && shiftReloads < 5) {
                 // A hiccup reading the buffer (it's still recording): pick up where it was.
@@ -1717,6 +1776,7 @@ class LiveTvPlaybackController @Inject constructor(
         reconnectJob?.cancel()
         reconnectJob = scope.launch {
             delay((attempt * 2_000L).coerceAtMost(10_000L))
+            if (stoppedForBackground) return@launch
             val ch = currentChannel ?: return@launch
             val url = currentUrl ?: return@launch
             val p = _player ?: return@launch
@@ -1890,6 +1950,8 @@ class LiveTvPlaybackController @Inject constructor(
         backgroundJob?.cancel()
         backgroundJob = null
         resumeAfterBackground = null
+        stoppedForBackground = false
+        backgroundResumeSeekMs = null
         clearStarting()
         stopShift()
         reconnectJob?.cancel()

@@ -24,6 +24,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check personal customizations
+        run: |
+          python3 scripts/check-personal-customizations.py
+          python3 scripts/test_verify_android_upgrade.py
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -52,6 +57,10 @@ jobs:
           # read). A secret can point it elsewhere; otherwise the public address is used.
           INTRODB_API_URL: ${{ secrets.INTRODB_API_URL }}
         run: |
+          if [ -z "$NUVIO_BACKEND_URL" ] || [ -z "$NUVIO_BACKEND_KEY" ]; then
+            echo "::error::Login backend settings are required for the QR sign-in flow."
+            exit 1
+          fi
           : > keys.properties
           add() { if [ -n "$2" ]; then echo "$1=$2" >> keys.properties; fi; }
           if [ -n "$NUVIO_BACKEND_URL" ]; then
@@ -117,17 +126,38 @@ jobs:
           done
           grep -h "app_name" app/src/full/res/values/livetv_app_name.xml
 
-      - name: Build APK
+      - name: Test updater, watched badges and beta regressions
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' --tests 'com.nuvio.tv.core.auth.AccountLocalDataResetServiceTest' --tests 'com.nuvio.tv.core.tracking.NuvioWatchedEpisodeProjectionTest' --tests 'com.nuvio.tv.data.repository.WatchProgressRepositoryProfileIsolationTest' --tests 'com.nuvio.tv.ui.screens.home.SeriesBadgeRefreshTest' --tests 'com.nuvio.tv.ui.screens.home.HomeEnrichmentRetryTest' --tests 'com.nuvio.tv.ui.screens.home.ContinueWatchingAiringRulesTest' --tests 'com.nuvio.tv.ui.screens.home.HomeRowVisibilityTest' --tests 'com.nuvio.tv.domain.model.CollectionOrderingTest' --tests 'com.nuvio.tv.core.image.CollectionCoverPreviewTest' --tests 'com.nuvio.tv.ui.screens.collection.GridReleaseDateTest' --stacktrace -PlivetvTestBuild=${{ inputs.test_build == true }}
+
+      - name: Build signed APK after tests pass
         run: |
           chmod +x gradlew
           ./gradlew :app:assembleFullRelease --stacktrace -PlivetvTestBuild=${{ inputs.test_build == true }}
+
+      - name: Verify regular Beta 3 updates Beta 2 in place
+        if: ${{ !inputs.test_build }}
+        run: |
+          set -euo pipefail
+          previous="$RUNNER_TEMP/epiSLATE-beta-2.apk"
+          curl --fail --location --retry 3 --output "$previous" 'https://github.com/TheTooth29/epiSLATE/releases/download/v1.0.0-beta.2/epiSLATE-1.0.0-beta.2-universal-release.apk'
+          aapt=$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -V | tail -n 1)
+          apksigner=$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -n 1)
+          test -n "$aapt" && test -n "$apksigner"
+          shopt -s nullglob
+          universal=(app/build/outputs/apk/full/release/*universal*.apk)
+          test "${#universal[@]}" -eq 1
+          for apk in app/build/outputs/apk/full/release/*.apk; do
+            python3 scripts/verify-android-upgrade.py --aapt "$aapt" --apksigner "$apksigner" --previous "$previous" --candidate "$apk"
+          done
 
       - name: Collect APKs
         run: |
           mkdir -p out
           for apk in app/build/outputs/apk/full/release/*.apk; do
             filename=$(basename "$apk")
-            cp "$apk" "out/epiSLATE-1.0.0-beta.1-${filename#app-full-}"
+            cp "$apk" "out/epiSLATE-1.0.0-beta.3-${filename#app-full-}"
           done
           ls -la out
 
@@ -216,10 +246,10 @@ jobs:
 
       - name: Upload build artifact
         if: ${{ !inputs.test_build }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: nuvio-livetv-apks
-          path: out/*.apk
+          path: out/*universal-release.apk
+          archive: false
           if-no-files-found: error
           retention-days: 90
 
@@ -233,10 +263,10 @@ jobs:
           make_latest: false
           body: |
             ## epiSLATE Beta
-            Version: **1.0.0-beta.1**
+            Version: **1.0.0-beta.3**
 
-            First epiSLATE beta for testing on Android TV and Google TV.
-            Includes the tested homepage spacing, logo and clock alignment, dimmed row headings and dates, and cleaner category headers.
+            Third epiSLATE beta for Android TV and Google TV.
+            Restores watched-series checkmarks after Nuvio sync, adds a centered startup update dialog, and keeps Test builds separate from regular-release updates. These fixes passed owner TV testing before merging into dev.
 
             Download the **universal** APK below if you are unsure which version to install.
             This beta has no trial expiration or activation requirement.
