@@ -8,6 +8,7 @@ config = build_config.read_text(encoding="utf-8")
 required = (
     'APPLICATION_ID = "com.nuvio.livetv.trial"',
     'TRIAL_ENABLED = true',
+    'VERSION_CODE = 107108',
     'FEATURE_IN_APP_UPDATES_ENABLED = false',
     'VERSION_NAME = "1.0.0-beta.4-trial"',
 )
@@ -15,7 +16,7 @@ for marker in required:
     if marker not in config:
         raise SystemExit("Trial build configuration check failed: " + marker)
 badging = subprocess.check_output([str(aapt), "dump", "badging", str(apk)], text=True)
-if not any(line.startswith("package: name='com.nuvio.livetv.trial'") and "versionName='1.0.0-beta.4-trial'" in line for line in badging.splitlines()):
+if not any(line.startswith("package: name='com.nuvio.livetv.trial'") and "versionName='1.0.0-beta.4-trial'" in line and "versionCode='107108'" in line for line in badging.splitlines()):
     raise SystemExit("APK package or version is not the dedicated trial.")
 for prefix in ("application-label:", "launchable-activity:"):
     rows = [line for line in badging.splitlines() if line.startswith(prefix)]
