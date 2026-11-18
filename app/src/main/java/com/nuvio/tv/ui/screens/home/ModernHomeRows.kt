@@ -392,11 +392,12 @@ private fun ModernCatalogRowItem(
         useLandscapeOverlayTreatment = useLandscapePosters,
         alwaysShowLandscapeClearlogo = alwaysShowLandscapeClearlogo,
         showLabels = showLabels,
+        trialUnavailable = trialLocked,
         placeholderShimmerOffsetState = placeholderShimmerOffsetState,
         cardCornerRadius = posterCardCornerRadius,
         cardWidth = cardMetrics.width,
         cardHeight = cardMetrics.height,
-        modifier = modifier.graphicsLayer { alpha = if (trialLocked) 0.35f else 1f },
+        modifier = modifier,
         focusedPosterBackdropExpandEnabled = effectiveExpandEnabled,
         isBackdropExpanded = effectiveBackdropExpanded,
         playTrailerInExpandedCard = playTrailerInExpandedCard,
@@ -415,7 +416,6 @@ private fun ModernCatalogRowItem(
         },
         onClick = {
             if (trialLocked) {
-                android.widget.Toast.makeText(trialContext, "Not available in the trial version.", android.widget.Toast.LENGTH_SHORT).show()
                 return@ModernCarouselCard
             }
             latestOnFocused()
@@ -1122,6 +1122,7 @@ internal fun ModernRowSection(
 @Composable
 private fun ModernCarouselCard(
     item: ModernCarouselItem,
+    trialUnavailable: Boolean = false,
     useLandscapeOverlayTreatment: Boolean,
     alwaysShowLandscapeClearlogo: Boolean = false,
     showLabels: Boolean,
@@ -1388,6 +1389,7 @@ private fun ModernCarouselCard(
                 }
             },
             modifier = Modifier
+                .graphicsLayer { alpha = if (trialUnavailable) 0.35f else 1f }
                 .fillMaxWidth()
                 .height(cardHeight)
                 .focusRequester(focusRequester)
@@ -1605,6 +1607,10 @@ private fun ModernCarouselCard(
             }
         }
 
+        if (trialUnavailable) {
+            Text(if (isFocused) "Not available in the trial version." else "", color = Color.White,
+                modifier = Modifier.height(34.dp), style = MaterialTheme.typography.labelMedium, maxLines = 2)
+        }
         if (showLabels && !isBackdropExpanded && item.title.isNotBlank()) {
             Column(
                 modifier = Modifier

@@ -45,10 +45,11 @@ internal fun tabbedGridPreviewGeometry(
     return TabbedGridPreviewGeometry(cardWidth, rowHeight, if (centered) rowHeight + 24f else height)
 }
 
-/** Deliberately separate from production preferences and restricted to the Test package. */
+/** Separate layout preferences for Test and Trial; regular release behavior is preserved. */
 internal class TabbedGridPreviewStore private constructor(context: Context) {
     private val preferences = context.getSharedPreferences("tabbed_grid_preview", Context.MODE_PRIVATE)
-    private val _mode = MutableStateFlow(TabbedGridPreview.fromStored(preferences.getString("mode", null)))
+    private val _mode = MutableStateFlow(TabbedGridPreview.fromStored(preferences.getString("mode",
+        if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) TabbedGridPreview.TWO_ROWS.name else null)))
     val mode = _mode.asStateFlow()
 
     fun select(mode: TabbedGridPreview) {
@@ -77,7 +78,8 @@ internal class TabbedGridPreviewStore private constructor(context: Context) {
     }
 
     companion object {
-        fun isTestPackage(packageName: String) = packageName == "com.nuvio.livetv.test"
+        fun isTestPackage(packageName: String) = packageName == "com.nuvio.livetv.test" ||
+            (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && packageName == "com.nuvio.livetv.trial")
         @Volatile private var instance: TabbedGridPreviewStore? = null
         fun get(context: Context): TabbedGridPreviewStore {
             check(isTestPackage(context.packageName))

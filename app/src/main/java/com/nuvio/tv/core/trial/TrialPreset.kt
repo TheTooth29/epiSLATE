@@ -56,6 +56,11 @@ class TrialPreset @Inject constructor(
             streamBadges.setStreamBadgeRules(rules, profileId = 1)
             check(marker.edit().putBoolean("stream_badges_v1_applied", true).commit())
         }
+        if (!marker.getBoolean("browsing_defaults_v1_applied", false)) {
+            layout.setCatalogTypeSuffixEnabled(false)
+            layout.setFocusedPosterBackdropExpandEnabled(false)
+            check(marker.edit().putBoolean("browsing_defaults_v1_applied", true).commit())
+        }
         if (marker.getBoolean("v1_applied", false)) return@withContext
         val preset = context.assets.open("trial-preset.json").bufferedReader().use { JSONObject(it.readText()) }
         val urls = preset.getJSONArray("addonUrls")

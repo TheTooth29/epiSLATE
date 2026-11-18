@@ -306,6 +306,16 @@ fun ModernHomeContent(
     LaunchedEffect(scrollToTopTrigger) {
         if (scrollToTopTrigger > 0) {
             verticalRowListState.scrollToItem(0, 0)
+            if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && focusState.focusedRowKey == "continue_watching") {
+                focusedItemByRow["continue_watching"] = 0
+                activeRowKey.value = "continue_watching"
+                activeItemIndex.intValue = 0
+                focusHolder.activeRowKey = "continue_watching"
+                focusHolder.activeItemIndex = 0
+                pendingRowFocusKey.value = "continue_watching"
+                pendingRowFocusIndex.value = 0
+                pendingRowFocusNonce.intValue++
+            }
         }
     }
 

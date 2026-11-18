@@ -84,6 +84,7 @@ fun GridContentCard(
     yearLabelOverride: String? = null,
     subtleReleaseDate: Boolean = false,
     releaseLabelTopPadding: androidx.compose.ui.unit.Dp = 2.dp,
+    showNeutralOutline: Boolean = false,
     onFocused: () -> Unit = {}
 ) {
     val cardShape = remember(posterCardStyle.cornerRadius) { RoundedCornerShape(posterCardStyle.cornerRadius) }
@@ -192,6 +193,10 @@ fun GridContentCard(
                 focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent
             ),
             border = CardDefaults.border(
+                border = if (showNeutralOutline) Border(
+                    border = BorderStroke(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.12f)),
+                    shape = cardShape
+                ) else Border.None,
                 focusedBorder = Border(
                     border = NuvioTheme.focusRing.border(posterCardStyle.focusedBorderWidth),
                     shape = cardShape
