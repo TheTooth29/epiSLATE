@@ -27,6 +27,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.repeatOnLifecycle
@@ -41,6 +43,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.tv.material3.Button
 import androidx.tv.material3.Text
 import com.nuvio.tv.BuildConfig
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -92,10 +95,17 @@ fun TrialAppGate(onExit: () -> Unit, content: @Composable () -> Unit) {
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) TrialAdminSession.reset()
+            if (event == Lifecycle.Event.ON_STOP) {
+                TrialAdminSession.reset()
+                // An exit prompt belongs to the current foreground visit, never a later launch.
+                TrialExitSession.requested = false
+            }
         }
         owner.lifecycle.addObserver(observer)
-        onDispose { owner.lifecycle.removeObserver(observer) }
+        onDispose {
+            owner.lifecycle.removeObserver(observer)
+            TrialExitSession.requested = false
+        }
     }
     CompositionLocalProvider(LocalSettingsVisit provides settingsVisit) {
         Box(Modifier.fillMaxSize()) {
@@ -112,10 +122,17 @@ fun TrialAppGate(onExit: () -> Unit, content: @Composable () -> Unit) {
             snapshot.status == TrialStatus.NEEDS_CODE -> TrialActivationScreen(onExit) { activationWelcome = true }
             else -> TrialEndedScreen(onExit)
         }
-        // Overlay preserves navigation/profile state when choosing Keep exploring.
-        if (TrialExitSession.requested) TrialExitScreen(snapshot,
-            onStay = { TrialExitSession.requested = false },
-            onExit = { TrialExitSession.requested = false; onExit() })
+        // Retain navigation underneath, but isolate remote focus in a modal window.
+        // Startup/profile/sidebar effects must not steal focus from the exit buttons.
+        if (TrialExitSession.requested) Dialog(
+            onDismissRequest = {},
+            properties = DialogProperties(usePlatformDefaultWidth = false,
+                dismissOnBackPress = false, dismissOnClickOutside = false, decorFitsSystemWindows = false)
+        ) {
+            TrialExitScreen(snapshot,
+                onStay = { TrialExitSession.requested = false },
+                onExit = { TrialExitSession.requested = false; onExit() })
+        }
         }
     }
 }
@@ -270,7 +287,7 @@ private fun TrialExitScreen(snapshot: TrialSnapshot, onStay: () -> Unit, onExit:
     TrialFrame("Enjoying your sneak peek?", time) {
         Text("Ready for more epiSLATE?", color = Color.White, fontSize = 20.sp)
         Spacer(Modifier.height(8.dp))
-        Text("Contact episl8.admin@gmail.com to ask about membership options after your trial.",
+        Text("Contact episl8.admin@gmail.com to ask about subscription options after your trial.",
             color = Color(0xFFCFD8E3), modifier = Modifier.widthIn(max = 620.dp))
         Spacer(Modifier.height(24.dp))
         TrialButton(modifier = Modifier.focusRequester(stay).focusProperties {
@@ -281,7 +298,15 @@ private fun TrialExitScreen(snapshot: TrialSnapshot, onStay: () -> Unit, onExit:
             up = stay; down = FocusRequester.Cancel; left = FocusRequester.Cancel; right = FocusRequester.Cancel
         }, onClick = onExit) { Text("Exit epiSLATE") }
     }
-    LaunchedEffect(Unit) { stay.requestFocus() }
+    val owner = LocalLifecycleOwner.current
+    LaunchedEffect(owner) {
+        owner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            // Wait until the modal window and its buttons have been placed.
+            repeat(2) { withFrameNanos { } }
+            stay.requestFocus(androidx.compose.ui.focus.FocusDirection.Enter)
+            awaitCancellation()
+        }
+    }
 }
 
 @Composable
