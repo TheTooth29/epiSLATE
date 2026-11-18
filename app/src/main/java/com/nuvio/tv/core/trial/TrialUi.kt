@@ -6,6 +6,12 @@ import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalDensity
+import androidx.tv.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -153,14 +159,25 @@ private fun TrialFrame(title: String, message: String, content: @Composable Colu
 }
 
 @Composable
-private fun NumericEntry(value: String, length: Int, label: String, masked: Boolean, onChange: (String) -> Unit) {
+private fun NumericEntry(value: String, length: Int, label: String, masked: Boolean, nextFocus: FocusRequester? = null, onChange: (String) -> Unit) {
     val focus = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    var keyboardWasVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { focus.requestFocus() }
+    LaunchedEffect(keyboardVisible) {
+        if (keyboardWasVisible && !keyboardVisible && value.length == length) nextFocus?.requestFocus()
+        keyboardWasVisible = keyboardVisible
+    }
     OutlinedTextField(value, onValueChange = { text ->
         if (text.length <= length && text.all { it in '0'..'9' }) onChange(text)
-    }, modifier = Modifier.width(320.dp).focusRequester(focus), singleLine = true,
+    }, modifier = Modifier.width(320.dp).focusRequester(focus).focusProperties { down = if (value.length == length) nextFocus ?: FocusRequester.Default else FocusRequester.Default }, singleLine = true,
         label = { androidx.compose.material3.Text(label) },
-        keyboardOptions = KeyboardOptions(keyboardType = if (masked) KeyboardType.NumberPassword else KeyboardType.Number),
+        keyboardOptions = KeyboardOptions(keyboardType = if (masked) KeyboardType.NumberPassword else KeyboardType.Number, imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = {
+            keyboard?.hide()
+            if (value.length == length) nextFocus?.requestFocus()
+        }),
         visualTransformation = if (masked) PasswordVisualTransformation() else VisualTransformation.None)
 }
 
@@ -172,6 +189,8 @@ private fun TrialActivationScreen(onExit: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     var activated by remember { mutableStateOf(false) }
+    val activateFocus = remember { FocusRequester() }
+    val exitFocus = remember { FocusRequester() }
     BackHandler(onBack = onExit)
     TrialFrame(if (activated) "Your trial is ready" else "Your invitation to try epiSLATE",
         if (activated) "Your 72 hours has started. Enjoy exploring epiSLATE."
@@ -179,10 +198,10 @@ private fun TrialActivationScreen(onExit: () -> Unit) {
         if (activated) {
             Text("Enjoy your epiSLATE trial.", color = Color.White)
         } else {
-            NumericEntry(code, 6, "Invitation code", false) { code = it; error = null }
+            NumericEntry(code, 6, "Invitation code", false, nextFocus = activateFocus) { code = it; error = null }
             error?.let { Text(it, color = Color(0xFFFFB4AB)) }
             Spacer(Modifier.height(16.dp))
-            Button(enabled = code.length == 6 && !busy, onClick = {
+            TrialButton(modifier = Modifier.focusRequester(activateFocus).focusProperties { down = exitFocus }, enabled = code.length == 6 && !busy, onClick = {
                 busy = true
                 scope.launch {
                     val result = withContext(Dispatchers.IO) { access.redeem(code) }
@@ -200,7 +219,7 @@ private fun TrialActivationScreen(onExit: () -> Unit) {
             }) { Text(if (busy) "Activating…" else "Activate 72-hour trial") }
         }
         Spacer(Modifier.height(12.dp))
-        Button(onClick = onExit) { Text("Exit") }
+        TrialButton(modifier = Modifier.focusRequester(exitFocus).focusProperties { if (code.length == 6 && !busy && !activated) up = activateFocus }, enabled = !busy, onClick = onExit) { Text("Exit") }
     }
 }
 
@@ -208,7 +227,7 @@ private fun TrialActivationScreen(onExit: () -> Unit) {
 fun TrialEndedScreen(onExit: () -> Unit = { }) {
     BackHandler(onBack = onExit)
     TrialFrame("Your trial has ended", "Thanks for trying epiSLATE. Your 72-hour preview is complete.") {
-        Button(onClick = onExit) { Text("Close") }
+        TrialButton(onClick = onExit) { Text("Close") }
     }
 }
 
@@ -222,10 +241,10 @@ private fun TrialPinScreen(onCancel: () -> Unit, onUnlocked: () -> Unit) {
         if (error) Text("Incorrect PIN. Please try again.", color = Color(0xFFFFB4AB))
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Button(enabled = pin.length == 4, onClick = {
+            TrialButton(enabled = pin.length == 4, onClick = {
                 if (pin == "6969") onUnlocked() else { error = true; pin = "" }
             }) { Text("Unlock Settings") }
-            Button(onClick = onCancel) { Text("Cancel") }
+            TrialButton(onClick = onCancel) { Text("Cancel") }
         }
     }
 }
@@ -234,6 +253,32 @@ private fun TrialPinScreen(onCancel: () -> Unit, onUnlocked: () -> Unit) {
 private fun TrialConnectionScreen(onExit: () -> Unit) {
     BackHandler(onBack = onExit)
     TrialFrame("Connection required", "Connect to the internet to verify your trial. epiSLATE will retry automatically.") {
-        Button(onClick = onExit) { Text("Exit") }
+        TrialButton(onClick = onExit) { Text("Exit") }
     }
+}
+
+/** Explicit TV colors keep unfocused buttons dark even outside the regular app theme. */
+@Composable
+private fun TrialButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        colors = ButtonDefaults.colors(
+            containerColor = Color(0xFF243548),
+            contentColor = Color(0xFFE4EDF7),
+            focusedContainerColor = Color(0xFF8AB8ED),
+            focusedContentColor = Color(0xFF101923),
+            pressedContainerColor = Color(0xFF6B9AD1),
+            pressedContentColor = Color(0xFF101923),
+            disabledContainerColor = Color(0xFF1B2836),
+            disabledContentColor = Color(0xFF8090A2)
+        ),
+        content = content
+    )
 }
