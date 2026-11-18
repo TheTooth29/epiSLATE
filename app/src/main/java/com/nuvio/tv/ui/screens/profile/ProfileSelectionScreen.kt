@@ -394,7 +394,7 @@ fun ProfileSelectionScreen(
                     isManagementMode = isManagementMode,
                     profiles = displayedProfiles,
                     activeProfileId = activeProfileId,
-                    canAddProfile = isManagementMode && viewModel.canAddProfile,
+                    canAddProfile = !com.nuvio.tv.BuildConfig.TRIAL_ENABLED && isManagementMode && viewModel.canAddProfile,
                     profilePinEnabled = profilePinEnabled,
                     avatarImageUrlsById = avatarImageUrlsById,
                     profileThemes = profileThemes,

@@ -273,6 +273,8 @@ private fun ModernCatalogRowItem(
         is ModernPayload.ContinueWatching -> error("Unsupported payload for ModernCatalogRowItem")
     }
 
+    val trialLocked = (payload as? ModernPayload.CollectionFolder)?.let { com.nuvio.tv.core.trial.TrialContentPolicy.locked(it.collectionId, it.folderId) } == true
+    val trialContext = androidx.compose.ui.platform.LocalContext.current
     val metaPreview = item.metaPreview
     val isWatched = metaPreview?.let { isCatalogItemWatched(it) } ?: false
     val enrichedMeta by remember {
@@ -394,7 +396,7 @@ private fun ModernCatalogRowItem(
         cardCornerRadius = posterCardCornerRadius,
         cardWidth = cardMetrics.width,
         cardHeight = cardMetrics.height,
-        modifier = modifier,
+        modifier = modifier.graphicsLayer { alpha = if (trialLocked) 0.35f else 1f },
         focusedPosterBackdropExpandEnabled = effectiveExpandEnabled,
         isBackdropExpanded = effectiveBackdropExpanded,
         playTrailerInExpandedCard = playTrailerInExpandedCard,
@@ -412,6 +414,10 @@ private fun ModernCatalogRowItem(
             isCardFocused = focused
         },
         onClick = {
+            if (trialLocked) {
+                android.widget.Toast.makeText(trialContext, "Not available in the trial version.", android.widget.Toast.LENGTH_SHORT).show()
+                return@ModernCarouselCard
+            }
             latestOnFocused()
             item.metaPreview?.let { latestOnItemFocus(it) }
             when (payload) {

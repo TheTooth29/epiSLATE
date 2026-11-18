@@ -374,6 +374,8 @@ open class MainActivity : ComponentActivity() {
     @Inject
     lateinit var partyRepository: PartyRepository
 
+    @Inject lateinit var trialPreset: com.nuvio.tv.core.trial.TrialPreset
+
     private val pendingDeepLinkUrl = MutableStateFlow<String?>(null)
     private val pendingLaunchIntent = MutableStateFlow<Intent?>(null)
 
@@ -446,6 +448,7 @@ open class MainActivity : ComponentActivity() {
 
         setContent {
             com.nuvio.tv.core.trial.TrialAppGate(onExit = { finish() }) {
+            com.nuvio.tv.core.trial.TrialPresetGate(trialPreset) {
             var hasSelectedProfileThisSession by rememberSaveable { mutableStateOf(false) }
             var startupSession by remember { mutableIntStateOf(0) }
             // Triggered immediately on profile click (before system confirms selection).
@@ -841,7 +844,7 @@ open class MainActivity : ComponentActivity() {
                     } else {
 
                     val shouldShowProfileSelection =
-                        !hasSelectedProfileThisSession && (profiles.size > 1 || activeProfileHasPin)
+                        !hasSelectedProfileThisSession && (BuildConfig.TRIAL_ENABLED || profiles.size > 1 || activeProfileHasPin)
 
                     if (shouldShowProfileSelection) {
                         startupDestination = if (splashTriggered) StartupDestination.Loading else StartupDestination.ProfileSelection
@@ -920,6 +923,10 @@ open class MainActivity : ComponentActivity() {
                         else -> Screen.LayoutSelection.route
                     }
                     val navController = rememberNavController()
+                    val adminRevision by com.nuvio.tv.core.trial.TrialAdminRequest.revision.collectAsState()
+                    LaunchedEffect(adminRevision) {
+                        if (BuildConfig.TRIAL_ENABLED && adminRevision > 0) navController.navigate(Screen.Settings.route) { launchSingleTop = true }
+                    }
                     val navViewModelStoreOwner = rememberNavSessionViewModelStoreOwner(navController)
                     var optimisticRoute by remember { mutableStateOf<String?>(null) }
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -1222,7 +1229,7 @@ open class MainActivity : ComponentActivity() {
                                 }
                             }
                             liveTvPages.forEachIndexed { i, page -> add(if (i == 0) page.copy(sectionStart = true) else page) }
-                            add(
+                            if (!BuildConfig.TRIAL_ENABLED) add(
                                 DrawerItem(
                                     route = Screen.Settings.route,
                                     label = strNavSettings,
@@ -1426,6 +1433,7 @@ open class MainActivity : ComponentActivity() {
             }
         }
 
+            } // TrialPresetGate
         } // TrialAppGate / setContent wrapper
 
         jankStats = JankStats.createAndTrack(window) { frameData ->
@@ -1506,6 +1514,10 @@ open class MainActivity : ComponentActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (BuildConfig.TRIAL_ENABLED && event.keyCode == KeyEvent.KEYCODE_MENU && event.action == KeyEvent.ACTION_DOWN && event.isLongPress) {
+            com.nuvio.tv.core.trial.TrialAdminRequest.revision.value++
+            return true
+        }
         // Live TV fork: remember when the remote was last used (the home screen's Live TV row
         // only claims the first highlight while nobody has pressed anything yet).
         if (event.action == KeyEvent.ACTION_DOWN) com.nuvio.tv.livetv.home.LiveTvHomeFocus.lastKeyAt = android.os.SystemClock.uptimeMillis()

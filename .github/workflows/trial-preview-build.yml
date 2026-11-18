@@ -4,7 +4,7 @@ run-name: epiSLATE Trial · ${{ github.sha }}
 # This work-branch build uploads an artifact only. It never publishes a release.
 on:
   push:
-    branches: [work/trial-activation]
+    branches: [work/trial-beta4-online]
   workflow_dispatch:
 
 permissions:
@@ -108,13 +108,32 @@ jobs:
             echo "NUVIO_RELEASE_STORE_PASSWORD=livetvfork"
           } >> "$GITHUB_ENV"
 
+      - name: Install private trial preset
+        env:
+          TRIAL_PRESET_B64: ${{ secrets.EPISLATE_TRIAL_PRESET_B64 }}
+        run: |
+          python3 - <<'PY'
+          import base64, gzip, json, os
+          from pathlib import Path
+          encoded = os.environ.get('TRIAL_PRESET_B64', '')
+          if not encoded:
+              raise SystemExit('Missing private trial preset secret')
+          raw = gzip.decompress(base64.b64decode(encoded, validate=True))
+          preset = json.loads(raw)
+          assert preset['version'] == 1 and len(preset['addonUrls']) == 2
+          folder = Path('app/src/trialPreset/assets')
+          folder.mkdir(parents=True, exist_ok=True)
+          (folder / 'trial-preset.json').write_bytes(raw)
+          print('Private trial preset installed; URLs are not logged.')
+          PY
+
       - name: Test trial policy and merged sign-out behavior
         run: |
           chmod +x gradlew
-          ./gradlew :app:testFullDebugUnitTest --stacktrace --console=plain -PepislateTrial=true -PlivetvTestBuild=false --tests 'com.nuvio.tv.core.trial.*' --tests 'com.nuvio.tv.core.auth.AccountLocalDataResetServiceTest'
+          ./gradlew :app:testFullDebugUnitTest --stacktrace --console=plain -PepislateTrial=true -PlivetvTestBuild=false --tests 'com.nuvio.tv.core.trial.*' --tests 'com.nuvio.tv.core.auth.AccountLocalDataResetServiceTest' -Dorg.gradle.workers.max=2
 
       - name: Build signed trial APK
-        run: ./gradlew :app:assembleFullRelease --stacktrace --console=plain -PepislateTrial=true -PlivetvTestBuild=false
+        run: ./gradlew :app:assembleFullRelease --stacktrace --console=plain -PepislateTrial=true -PlivetvTestBuild=false -Dorg.gradle.workers.max=2
 
       - name: Verify and collect the universal trial APK
         run: |
@@ -125,7 +144,7 @@ jobs:
           python3 scripts/verify-trial-apk.py "$apk" "$build_tools/aapt" app/build/generated/source/buildConfig/full/release/com/nuvio/tv/BuildConfig.java
           "$build_tools/apksigner" verify --verbose "$apk"
           mkdir -p out
-          cp "$apk" "out/epiSLATE-Trial-1.0.0-beta.1-build-${{ github.run_number }}.apk"
+          cp "$apk" "out/epiSLATE-Trial-1.0.0-beta.4-build-${{ github.run_number }}.apk"
           sha256sum out/epiSLATE-Trial-*.apk
 
       - name: Upload epiSLATE Trial APK

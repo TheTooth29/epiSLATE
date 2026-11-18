@@ -63,3 +63,6 @@ AGENTS.md
 /PR.md
 docs/
 status-page/
+
+# Owner-supplied trial addon addresses; injected only for dedicated trial builds.
+app/src/trialPreset/

@@ -399,6 +399,10 @@ android.defaultConfig.buildConfigField(
     "String", "NUVIO_BASE_VERSION", "\"${android.defaultConfig.versionName ?: ""}\""
 )
 
+if (invitationTrialBuild) {
+    android.sourceSets.getByName("main").assets.srcDir("src/trialPreset/assets")
+}
+
 val livetvBuildNumber = (findProperty("livetvBuildNumber") as String?)?.toIntOrNull() ?: 7
 android.defaultConfig.versionCode = (android.defaultConfig.versionCode ?: 1) * 100 + livetvBuildNumber
 ((findProperty("livetvVersionName") as String?) ?: "1.0.0-beta.4").takeIf { it.isNotBlank() }?.let {
@@ -651,6 +655,7 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20250517")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     testImplementation("io.mockk:mockk:1.13.12")
     testImplementation("com.squareup.okhttp3:mockwebserver:5.3.2")

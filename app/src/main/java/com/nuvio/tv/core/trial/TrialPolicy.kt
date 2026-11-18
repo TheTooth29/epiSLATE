@@ -24,6 +24,6 @@ object TrialPolicy {
     )
 }
 
-enum class TrialStatus { NEEDS_CODE, ACTIVE, EXPIRED }
+enum class TrialStatus { NEEDS_CODE, ACTIVE, EXPIRED, CONNECTION_REQUIRED }
 data class TrialSnapshot(val status: TrialStatus, val expiresAt: Long = 0, val remainingMs: Long = 0)
-enum class RedemptionResult { ACTIVATED, INVALID_CODE, ALREADY_STARTED, STORAGE_ERROR }
+enum class RedemptionResult { ACTIVATED, INVALID_CODE, ALREADY_STARTED, STORAGE_ERROR, NETWORK_ERROR, RATE_LIMITED }

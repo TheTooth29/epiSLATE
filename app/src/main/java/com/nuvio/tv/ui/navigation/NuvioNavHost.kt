@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.navigation
 
+import androidx.compose.foundation.layout.fillMaxSize
 import kotlinx.coroutines.launch
 import com.nuvio.tv.ui.theme.NuvioMotion
 import com.nuvio.tv.ui.components.PlaybackAvailabilityProvider
@@ -1643,6 +1644,12 @@ private fun PlaybackNavHost(
                 navArgument("folderId") { type = NavType.StringType }
             )
         ) {
+            if (com.nuvio.tv.core.trial.TrialContentPolicy.locked(it.arguments?.getString("collectionId").orEmpty(), it.arguments?.getString("folderId").orEmpty())) {
+                androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                    androidx.tv.material3.Text("Not available in the trial version.")
+                }
+                return@trialComposable
+            }
             com.nuvio.tv.ui.screens.collection.FolderDetailScreen(
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     val heroBackdrop = HeroBackdropState.consumeAndClear()

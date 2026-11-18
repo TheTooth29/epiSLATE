@@ -52,7 +52,7 @@ private fun trialSnapshot(): TrialSnapshot {
     val owner = LocalLifecycleOwner.current
     val snapshot by produceState(access.snapshot(), access, owner) {
         owner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            while (true) { value = withContext(Dispatchers.IO) { access.snapshot() }; delay(1000) }
+            while (true) { value = withContext(Dispatchers.IO) { access.refreshOnline(); access.snapshot() }; delay(1000) }
         }
     }
     return snapshot
@@ -76,9 +76,10 @@ fun TrialAppGate(onExit: () -> Unit, content: @Composable () -> Unit) {
     }
     CompositionLocalProvider(LocalSettingsVisit provides settingsVisit) {
         when {
-            snapshot.status == TrialStatus.ACTIVE || (snapshot.status == TrialStatus.EXPIRED && TrialSessions.hasPlayback()) -> {
+            snapshot.status == TrialStatus.ACTIVE || (snapshot.status != TrialStatus.NEEDS_CODE && TrialSessions.hasPlayback()) -> {
                 content()
             }
+            snapshot.status == TrialStatus.CONNECTION_REQUIRED -> TrialConnectionScreen(onExit)
             snapshot.status == TrialStatus.NEEDS_CODE -> TrialActivationScreen(onExit)
             else -> TrialEndedScreen(onExit)
         }
@@ -140,7 +141,7 @@ private fun TrialFrame(title: String, message: String, content: @Composable Colu
     MaterialTheme(colorScheme = darkColorScheme(primary = Color(0xFF8AB8ED))) {
         Column(Modifier.fillMaxSize().background(Color(0xFF101923)).padding(36.dp),
             verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("epiSLATE Trial", color = Color(0xFF8AB8ED), fontSize = 24.sp)
+            androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(com.nuvio.tv.R.drawable.epislate_wordmark), "epiSLATE", Modifier.width(240.dp).height(70.dp))
             Spacer(Modifier.height(20.dp))
             Text(title, color = Color.White, fontSize = 26.sp)
             Spacer(Modifier.height(12.dp))
@@ -176,7 +177,7 @@ private fun TrialActivationScreen(onExit: () -> Unit) {
         if (activated) "Your 72 hours has started. Enjoy exploring epiSLATE."
         else "Enter your six-digit invitation code. Your 72-hour trial starts when you activate it.") {
         if (activated) {
-            Text("Ends: " + DateFormat.getDateTimeInstance().format(Date(access.snapshot().expiresAt)), color = Color.White)
+            Text("Enjoy your epiSLATE trial.", color = Color.White)
         } else {
             NumericEntry(code, 6, "Invitation code", false) { code = it; error = null }
             error?.let { Text(it, color = Color(0xFFFFB4AB)) }
@@ -189,6 +190,8 @@ private fun TrialActivationScreen(onExit: () -> Unit) {
                     error = when (result) {
                         RedemptionResult.INVALID_CODE -> "That invitation code is not valid. Please check it."
                         RedemptionResult.ALREADY_STARTED -> "This installation has already started its trial."
+                        RedemptionResult.NETWORK_ERROR -> "Unable to connect. Check your internet connection and try again."
+                        RedemptionResult.RATE_LIMITED -> "Too many attempts. Please wait a minute and try again. If this continues, contact your trial administrator."
                         RedemptionResult.STORAGE_ERROR -> "Unable to save activation. Please try again."
                         else -> null
                     }
@@ -224,5 +227,13 @@ private fun TrialPinScreen(onCancel: () -> Unit, onUnlocked: () -> Unit) {
             }) { Text("Unlock Settings") }
             Button(onClick = onCancel) { Text("Cancel") }
         }
+    }
+}
+
+@Composable
+private fun TrialConnectionScreen(onExit: () -> Unit) {
+    BackHandler(onBack = onExit)
+    TrialFrame("Connection required", "Connect to the internet to verify your trial. epiSLATE will retry automatically.") {
+        Button(onClick = onExit) { Text("Exit") }
     }
 }

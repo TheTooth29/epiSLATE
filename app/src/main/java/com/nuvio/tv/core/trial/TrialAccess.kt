@@ -10,6 +10,8 @@ class TrialAccess internal constructor(
     private val clock: TrialClock,
     private val acceptsCode: (String) -> Boolean = TrialCodeAllowlist::accepts
 ) {
+    private var online: OnlineTrialAccess? = null
+    fun refreshOnline() { online?.refresh() }
     private var sessionAnchor = 0L
     private var sessionElapsed = 0L
     private var lastPersistElapsed = 0L
@@ -17,6 +19,7 @@ class TrialAccess internal constructor(
 
     @Synchronized
     fun snapshot(): TrialSnapshot {
+        online?.let { return it.snapshot() }
         if (!BuildConfig.TRIAL_ENABLED) return TrialSnapshot(TrialStatus.ACTIVE, Long.MAX_VALUE, Long.MAX_VALUE)
         if (storageFailed) return TrialSnapshot(TrialStatus.EXPIRED)
         return try {
@@ -56,8 +59,13 @@ class TrialAccess internal constructor(
         }
     }
 
-    @Synchronized
     fun redeem(rawCode: String): RedemptionResult {
+        online?.let { return it.redeem(rawCode.trim()) }
+        return redeemLocal(rawCode)
+    }
+
+    @Synchronized
+    private fun redeemLocal(rawCode: String): RedemptionResult {
         if (!BuildConfig.TRIAL_ENABLED || snapshot().status != TrialStatus.NEEDS_CODE) return RedemptionResult.ALREADY_STARTED
         val code = rawCode.trim()
         if (!TrialPolicy.isCodeFormatValid(code) || !acceptsCode(code)) return RedemptionResult.INVALID_CODE
@@ -87,7 +95,7 @@ class TrialAccess internal constructor(
             instance ?: TrialAccess(
                 context.applicationContext.getSharedPreferences("epislate_invitation_trial", Context.MODE_PRIVATE),
                 AndroidTrialClock(context.applicationContext)
-            ).also { instance = it }
+            ).also { if (BuildConfig.TRIAL_ENABLED) it.online = OnlineTrialAccess(context.applicationContext); instance = it }
         }
     }
 }
