@@ -48,6 +48,10 @@ class UpdateJobService : JobService() {
 
     override fun onStartJob(params: JobParameters): Boolean {
         if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) return false
+        if (!UpdateInstallPolicy.supportsReleaseUpdates(packageName)) {
+            cancelUpdateJobs(this)
+            return false
+        }
         val entryPoint = EntryPointAccessors.fromApplication(applicationContext, UpdateJobEntryPoint::class.java)
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         jobScope = scope
@@ -109,9 +113,11 @@ class UpdateJobService : JobService() {
     companion object {
         /** Silent self-updates need Android 12+ and the "install unknown apps" permission. */
         fun canInstallSilently(context: Context): Boolean =
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && ApkInstaller.canRequestPackageInstalls(context)
+            UpdateInstallPolicy.supportsReleaseUpdates(context.packageName) &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && ApkInstaller.canRequestPackageInstalls(context)
 
         fun schedulePeriodicCheck(context: Context) {
+            if (!UpdateInstallPolicy.supportsReleaseUpdates(context.packageName)) return
             val scheduler = context.jobScheduler()
             if (scheduler.allPendingJobs.any { it.id == JOB_ID_CHECK }) return
             val job = JobInfo.Builder(JOB_ID_CHECK, ComponentName(context, UpdateJobService::class.java))
@@ -124,6 +130,7 @@ class UpdateJobService : JobService() {
 
         /** Downloads a newer release found by the in-app check without waiting for the next periodic run. */
         fun scheduleCheckNow(context: Context) {
+            if (!UpdateInstallPolicy.supportsReleaseUpdates(context.packageName)) return
             val job = JobInfo.Builder(JOB_ID_CHECK_NOW, ComponentName(context, UpdateJobService::class.java))
                 .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
                 .build()
@@ -145,6 +152,14 @@ class UpdateJobService : JobService() {
 
         fun cancelIdleInstall(context: Context) {
             context.jobScheduler().cancel(JOB_ID_INSTALL)
+        }
+
+        fun cancelUpdateJobs(context: Context) {
+            context.jobScheduler().apply {
+                cancel(JOB_ID_CHECK)
+                cancel(JOB_ID_CHECK_NOW)
+                cancel(JOB_ID_INSTALL)
+            }
         }
 
         private fun Context.jobScheduler(): JobScheduler =

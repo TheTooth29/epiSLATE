@@ -15,7 +15,7 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
     if (mpvView === view) return
     mpvView = view
 
-    if (view == null) return
+    if (view == null || isInBackground) return
     if (!isUsingMpvEngine()) return
     if (currentStreamUrl.isBlank()) return
     if (!mpvMediaLoadPrepared) return
@@ -26,7 +26,7 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
         view.applyHi10pGnextSoftwareFallback(shouldUseMpvHi10pGnextSoftwareFallback())
         view.applyHardwareDecodeMode(mpvHardwareDecodeModeSetting)
         registerMpvEventRelay(view)
-        view.setMedia(currentStreamUrl, currentHeaders)
+        view.setMedia(currentStreamUrl, currentHeaders, startPaused = userPausedManually)
         view.setPlaybackSpeed(_uiState.value.playbackSpeed)
         view.applyAudioAmplificationDb(_uiState.value.audioAmplificationDb)
         view.applyAudioLanguagePreferences(mpvPreferredAudioLanguages)
@@ -39,7 +39,7 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
         view.applyBluetoothAudioRoute(currentAudioOutputRoute?.isBluetooth == true)
         view.setAudioDelayMs(_uiState.value.audioDelayMs)
         view.applyAspectMode(_uiState.value.aspectMode)
-        view.setPaused(false)
+        view.setPaused(userPausedManually)
         applyPendingMpvSeekIfNeeded(view)
         hasRenderedFirstFrame = false
         endDetectionArmed = false
@@ -89,8 +89,10 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
 internal fun PlayerRuntimeController.initializeMpvPlayer(
     url: String,
     headers: Map<String, String>,
-    allowEngineFailover: Boolean = true
+    allowEngineFailover: Boolean = true,
+    startPaused: Boolean = false
 ) {
+    if (deferPlayerInitializationForBackground()) return
     mpvMediaLoadPrepared = true
     prefetchAutoSyncIndex(url, headers) // AutoSync hook
     _exoPlayer?.release()
@@ -135,7 +137,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
             .takeIf { it > 0L }
             ?: (_uiState.value.pendingSeekPosition?.coerceAtLeast(0L) ?: 0L)
         playbackAnalyticsDiagnostics.setStartupStartPosition(initialResumePosition)
-        view.setMedia(url, headers, initialResumePosition)
+        view.setMedia(url, headers, initialResumePosition, startPaused = startPaused)
         playbackAnalyticsDiagnostics.recordRawEventLine(
             "PLAYER_INIT: engine=MPV host=${url.safeMpvTraceHost()} " +
                 "playbackSpeed=${_uiState.value.playbackSpeed} resumePositionMs=$initialResumePosition"
@@ -157,7 +159,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
         view.applyBluetoothAudioRoute(currentAudioOutputRoute?.isBluetooth == true)
         view.setAudioDelayMs(_uiState.value.audioDelayMs)
         view.applyAspectMode(_uiState.value.aspectMode)
-        view.setPaused(false)
+        view.setPaused(userPausedManually)
         applyPendingMpvSeekIfNeeded(view)
 
         hasRenderedFirstFrame = false
@@ -257,6 +259,29 @@ internal fun PlayerRuntimeController.pauseForLifecycle() {
         player.playWhenReady = false
         player.pause()
     }
+}
+
+/** Defer retries and delayed preparation rather than reclaim output in another app. */
+internal fun PlayerRuntimeController.deferPlayerInitializationForBackground(): Boolean {
+    if (!isInBackground) return false
+    if (currentStreamUrl.isNotEmpty()) pendingBackgroundCrashRecovery = true
+    return true
+}
+
+internal fun PlayerRuntimeController.releaseForBackground() {
+    if (!isInBackground || currentStreamUrl.isEmpty()) return
+    val state = _uiState.value
+    backgroundCrashSavedPositionMs = if (state.isLive) 0L else {
+        val position = if (isUsingMpvEngine()) mpvView?.currentPositionMs() else _exoPlayer?.currentPosition
+        listOfNotNull(position, state.pendingSeekPosition, backgroundCrashSavedPositionMs,
+            _playbackTimeline.value.currentPosition).firstOrNull { it > 0L } ?: 0L
+    }
+    saveWatchProgress()
+    emitPauseScrobbleForCurrentProgress()
+    pendingBackgroundCrashRecovery = true
+    // Full release closes the decoder, audio output and MediaSession for both engines.
+    // Keep the torrent URL alive so a paused foreground rebuild can use the same stream.
+    releasePlayer(flushPlaybackState = false, keepTorrentStream = true)
 }
 
 internal fun PlayerRuntimeController.resumeForLifecycle() {

@@ -473,6 +473,16 @@ fun PlayerScreen(
                 Lifecycle.Event.ON_PAUSE -> {
                     viewModel.pauseForLifecycle()
                 }
+                Lifecycle.Event.ON_STOP -> {
+                    var hostContext: android.content.Context? = context
+                    while (hostContext is android.content.ContextWrapper && hostContext !is androidx.activity.ComponentActivity) {
+                        hostContext = hostContext.baseContext
+                    }
+                    val host = hostContext as? androidx.activity.ComponentActivity
+                    if (host != null && isAppBackgroundStop(host.isFinishing, host.isChangingConfigurations, host.lifecycle.currentState)) {
+                        viewModel.releaseForBackground()
+                    }
+                }
                 Lifecycle.Event.ON_RESUME -> {
                     // Re-create the MediaSession so media controls work in foreground.
                     // Don't auto-resume playback — let the user press play.

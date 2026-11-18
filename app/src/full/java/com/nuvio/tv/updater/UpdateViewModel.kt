@@ -22,7 +22,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 data class UpdateUiState(
+    val supportsReleaseUpdates: Boolean = UpdateInstallPolicy.supportsReleaseUpdates(BuildConfig.APPLICATION_ID),
+    val isUpdatePreview: Boolean = false,
     val isChecking: Boolean = false,
+    val isManualPrompt: Boolean = false,
     val update: AppUpdate? = null,
     val isUpdateAvailable: Boolean = false,
     val isDownloading: Boolean = false,
@@ -49,13 +52,23 @@ class UpdateViewModel @Inject constructor(
     private val downloadStore: UpdateDownloadStore
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(UpdateUiState())
+    private val _uiState = MutableStateFlow(UpdateUiState(
+        supportsReleaseUpdates = UpdateInstallPolicy.supportsReleaseUpdates(context.packageName)
+    ))
     val uiState: StateFlow<UpdateUiState> = _uiState.asStateFlow()
     private var updateCheckJob: Job? = null
+    private var dismissedThisSession: String? = null
 
     init {
         viewModelScope.launch {
             if (BuildConfig.TRIAL_ENABLED) return@launch
+            if (!_uiState.value.supportsReleaseUpdates) {
+                UpdateJobService.cancelUpdateJobs(context)
+                // Discard any regular-release APK retained by an older Test build.
+                downloadStore.clear()
+                updatePreferences.setAutoInstalledTag(null)
+                return@launch
+            }
             val enabled = updatePreferences.updateBannerEnabled.first()
             val channel = updatePreferences.getOrInitializeUpdateChannel()
             val autoInstallEnabled = updatePreferences.autoInstallEnabled.first()
@@ -68,6 +81,8 @@ class UpdateViewModel @Inject constructor(
                     autoInstallNoticeEnabled = autoInstallNoticeEnabled
                 )
             }
+            // Old banner dismissals must not permanently suppress startup reminders.
+            updatePreferences.setIgnoredTag(null)
             downloadStore.clearIfInstalled()
             consumeAutoInstalledUpdate()
             syncBackgroundJobs()
@@ -79,6 +94,31 @@ class UpdateViewModel @Inject constructor(
 
     fun checkForUpdates(force: Boolean, showNoUpdateFeedback: Boolean) {
         if (BuildConfig.TRIAL_ENABLED) return
+        if (!_uiState.value.supportsReleaseUpdates) {
+            if (force) {
+                // A local preview has no download URL and never invokes the release feed.
+                _uiState.update {
+                    it.copy(
+                        update = AppUpdate(
+                            tag = BuildConfig.VERSION_NAME,
+                            title = context.getString(R.string.update_preview_title),
+                            notes = "",
+                            releaseUrl = null,
+                            assetName = "",
+                            assetUrl = "",
+                            assetSizeBytes = null
+                        ),
+                        isUpdateAvailable = false,
+                        isUpdatePreview = true,
+                        isManualPrompt = true,
+                        downloadedApkPath = null,
+                        showBanner = true,
+                        errorMessage = null
+                    )
+                }
+            }
+            return
+        }
         if (!force && !_uiState.value.updateBannerEnabled) return
 
         updateCheckJob?.cancel()
@@ -87,6 +127,7 @@ class UpdateViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     isChecking = true,
+                    isManualPrompt = force,
                     showBanner = false,
                     showUnknownSourcesDialog = false,
                     errorMessage = null,
@@ -94,7 +135,7 @@ class UpdateViewModel @Inject constructor(
                 )
             }
 
-            val dismissedTag = updatePreferences.ignoredTag.first()
+            val dismissedTag = dismissedThisSession
             val result = updateRepository.getLatestUpdate(channel)
             updatePreferences.setLastCheckAtMs(System.currentTimeMillis())
 
@@ -182,12 +223,7 @@ class UpdateViewModel @Inject constructor(
                 installedUpdate = null
             )
         }
-        val tag = state.update?.tag
-        if (tag != null) {
-            viewModelScope.launch {
-                updatePreferences.setIgnoredTag(tag)
-            }
-        }
+        dismissedThisSession = state.update?.tag
     }
 
     fun dismissUnknownSourcesDialog() {
@@ -248,6 +284,7 @@ class UpdateViewModel @Inject constructor(
 
     fun downloadUpdate() {
         if (BuildConfig.TRIAL_ENABLED) return
+        if (!_uiState.value.supportsReleaseUpdates || _uiState.value.isUpdatePreview) return
         val update = _uiState.value.update ?: return
 
         viewModelScope.launch {
@@ -280,7 +317,8 @@ class UpdateViewModel @Inject constructor(
                             errorMessage = null
                         )
                     }
-                    installUpdateOrRequestPermission()
+                    // Later also defers installation if the user dismisses during download.
+                    if (_uiState.value.showBanner) installUpdateOrRequestPermission()
                 }
                 .onFailure { error ->
                     _uiState.update {
@@ -289,7 +327,7 @@ class UpdateViewModel @Inject constructor(
                             downloadProgress = null,
                             downloadedApkPath = null,
                             errorMessage = error.message ?: context.getString(R.string.update_error_download_failed),
-                            showBanner = true
+                            showBanner = it.showBanner
                         )
                     }
                 }
@@ -298,6 +336,7 @@ class UpdateViewModel @Inject constructor(
 
     fun installUpdateOrRequestPermission() {
         if (BuildConfig.TRIAL_ENABLED) return
+        if (!_uiState.value.supportsReleaseUpdates || _uiState.value.isUpdatePreview) return
         val apkPath = _uiState.value.downloadedApkPath ?: return
         val apkFile = File(apkPath)
         if (!apkFile.exists()) {
@@ -310,6 +349,15 @@ class UpdateViewModel @Inject constructor(
             return
         }
 
+        val invalidApk = runCatching { ApkInstaller.requireSelfUpdate(context, apkFile) }.exceptionOrNull()
+        if (invalidApk != null) {
+            _uiState.update {
+                it.copy(downloadedApkPath = null, showBanner = false, feedbackMessage = invalidApk.message)
+            }
+            viewModelScope.launch { downloadStore.clear() }
+            return
+        }
+
         if (!ApkInstaller.canRequestPackageInstalls(context)) {
             _uiState.update { it.copy(showUnknownSourcesDialog = true, showBanner = true) }
             return
@@ -318,7 +366,10 @@ class UpdateViewModel @Inject constructor(
         _uiState.update { it.copy(showUnknownSourcesDialog = false) }
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { ApkInstaller.install(context, apkFile, background = false) }
-                .onFailure { ApkInstaller.launchSystemInstaller(context, apkFile) }
+                .recoverCatching { ApkInstaller.launchSystemInstaller(context, apkFile) }
+                .onFailure { error ->
+                    _uiState.update { it.copy(feedbackMessage = error.message, showUnknownSourcesDialog = false) }
+                }
         }
     }
 
@@ -361,6 +412,10 @@ class UpdateViewModel @Inject constructor(
     // Background checks run while the banner or automatic installs are on; the idle install job only with the latter.
     private fun syncBackgroundJobs() {
         if (BuildConfig.TRIAL_ENABLED) return
+        if (!_uiState.value.supportsReleaseUpdates) {
+            UpdateJobService.cancelUpdateJobs(context)
+            return
+        }
         if (BuildConfig.IS_DEBUG_BUILD) return
         val state = _uiState.value
         if (state.updateBannerEnabled || state.autoInstallEnabled) {

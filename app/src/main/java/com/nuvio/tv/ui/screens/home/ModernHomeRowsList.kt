@@ -79,6 +79,7 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun ModernHomeRowsList(
     rowsOnlyHomepage: Boolean = false,
+    fadeCollectionBottomRow: Boolean = false,
     isVerticalRowsScrollingState: State<Boolean>,
     carouselRows: StableList<HeroCarouselRow>,
     verticalRowListState: LazyListState,
@@ -454,7 +455,19 @@ internal fun ModernHomeRowsList(
                         }
                     }
                 }
-                androidx.compose.foundation.layout.Column {
+                androidx.compose.foundation.layout.Column(
+                    modifier = Modifier.graphicsLayer {
+                        if (fadeCollectionBottomRow) {
+                            val bottomRow = verticalRowListState.layoutInfo.visibleItemsInfo.lastOrNull {
+                                it.offset < rowsViewportHeight.toPx() && it.offset + it.size > 0
+                            }
+                            // Every bottom row dims until it receives focus, including the final row.
+                            val fade = bottomRow?.index == rowIndex && activeRowKey.value != row.key
+                            // Match the existing partially clipped homepage tile treatment.
+                            alpha = if (fade) 0.25f else 1f
+                        } else alpha = 1f
+                    }
+                ) {
                 if (liveTvHere && (liveTvRowAbove == true || !hasContinueWatching)) {
                     com.nuvio.tv.livetv.home.LiveTvHomeRow(hideUnlessFocused = true, above = liveTvRowAbove == true, startPadding = 52.dp, titleStyle = androidx.tv.material3.MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
                 }

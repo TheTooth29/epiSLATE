@@ -48,8 +48,11 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         initialized = true
     }
 
-    fun setMedia(url: String, headers: Map<String, String>, startPositionMs: Long = 0L) {
+    fun setMedia(url: String, headers: Map<String, String>, startPositionMs: Long = 0L, startPaused: Boolean = false) {
+        // Set the initial pause option before creating/loading libmpv: no audible autoplay burst.
+        initialPause = startPaused
         ensureInitialized()
+        setPaused(startPaused)
         val requestKey = buildMediaRequestKey(url = url, headers = headers) +
             "#start=${startPositionMs.coerceAtLeast(0L)}"
         if (hasQueuedInitialMedia && requestKey == lastMediaRequestKey) {
@@ -742,7 +745,10 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         cachedTrackList = null
     }
 
+    private var initialPause = false
+
     override fun initOptions() {
+        mpv.setOptionString("pause", if (initialPause) "yes" else "no")
         mpv.setOptionString("profile", "fast")
         mpv.setOptionString("msg-level", "ffmpeg=warn,vd=warn,ad=warn,vo=warn,ao=warn,demux=warn,lavf=warn,cplayer=warn,autoconvert=warn,hwupload=warn")
         setVo(if (hi10pGnextSoftwareFallbackActive) MPV_VIDEO_OUTPUT_GPU_NEXT else MPV_VIDEO_OUTPUT_GPU)

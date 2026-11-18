@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -272,6 +275,62 @@ private fun FolderHeader(folder: com.nuvio.tv.domain.model.CollectionFolder) {
 @OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 private fun TabbedGridContent(
+    uiState: FolderDetailUiState,
+    folder: com.nuvio.tv.domain.model.CollectionFolder,
+    tabFocusState: FolderDetailGridFocusState,
+    onSelectTab: (Int) -> Unit,
+    onNavigateToDetail: (String, String, String) -> Unit,
+    onSaveFocusState: (Int, Int, String?) -> Unit,
+    onLoadMore: () -> Unit = {},
+    isItemWatched: (MetaPreview) -> Boolean = { false },
+    loadUsDigitalDate: (suspend (String) -> String?)? = null,
+    onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> }
+) {
+    val context = LocalContext.current
+    if (!TabbedGridPreviewStore.isTestPackage(context.packageName) || uiState.viewMode != FolderViewMode.TABBED_GRID) {
+        OriginalTabbedGridContent(uiState, folder, tabFocusState, onSelectTab, onNavigateToDetail,
+            onSaveFocusState, onLoadMore, isItemWatched, loadUsDigitalDate, onItemLongPress)
+        return
+    }
+    val store = remember(context) { TabbedGridPreviewStore.get(context) }
+    val mode by store.mode.collectAsStateWithLifecycle()
+    var tabRestored by remember(folder.id, mode) { mutableStateOf(false) }
+    LaunchedEffect(folder.id, mode, uiState.tabs.size) {
+        if (!tabRestored && uiState.tabs.isNotEmpty()) {
+            onSelectTab(store.selectedTab(folder.id, mode, uiState.selectedTabIndex)
+                .coerceIn(uiState.tabs.indices))
+            tabRestored = true
+        }
+    }
+    if (!tabRestored) return
+    androidx.compose.runtime.SideEffect { store.saveSelectedTab(folder.id, mode, uiState.selectedTabIndex) }
+    val tab = uiState.tabs.getOrNull(uiState.selectedTabIndex)
+    val positionKey = remember(folder.id, tab, uiState.selectedTabIndex, mode) {
+        org.json.JSONArray(listOf(folder.id, uiState.selectedTabIndex, tab?.label, tab?.source.toString(), mode.name)).toString()
+    }
+    val saved = remember(positionKey) { store.position(positionKey) }
+    androidx.compose.runtime.key(mode, folder.id) {
+        val latestSave by rememberUpdatedState<(Int, Int, String?) -> Unit> { index, offset, focus ->
+            store.save(positionKey, index, offset, focus)
+            if (mode == TabbedGridPreview.ORIGINAL) onSaveFocusState(index, offset, focus)
+        }
+        val save: (Int, Int, String?) -> Unit = { index, offset, focus -> latestSave(index, offset, focus) }
+        if (mode == TabbedGridPreview.ORIGINAL) {
+            OriginalTabbedGridContent(uiState, folder,
+                if (saved.hasSavedFocus) saved else tabFocusState,
+                onSelectTab, onNavigateToDetail, save, onLoadMore, isItemWatched,
+                loadUsDigitalDate, onItemLongPress)
+        } else {
+            PreviewTabbedGridContent(uiState, folder, saved, onSelectTab, onNavigateToDetail,
+                { index, offset, focus -> store.save(positionKey, index, offset, focus) },
+                onLoadMore, isItemWatched, loadUsDigitalDate, onItemLongPress, mode)
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
+@Composable
+private fun OriginalTabbedGridContent(
     uiState: FolderDetailUiState,
     folder: com.nuvio.tv.domain.model.CollectionFolder,
     tabFocusState: FolderDetailGridFocusState,
@@ -559,6 +618,364 @@ private fun TabbedGridContent(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
+@Composable
+private fun PreviewTabbedGridContent(
+    uiState: FolderDetailUiState,
+    folder: com.nuvio.tv.domain.model.CollectionFolder,
+    tabFocusState: FolderDetailGridFocusState,
+    onSelectTab: (Int) -> Unit,
+    onNavigateToDetail: (String, String, String) -> Unit,
+    onSaveFocusState: (Int, Int, String?) -> Unit,
+    onLoadMore: () -> Unit = {},
+    isItemWatched: (MetaPreview) -> Boolean = { false },
+    loadUsDigitalDate: (suspend (String) -> String?)? = null,
+    onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
+    mode: TabbedGridPreview
+) {
+    val tabFocusRequesters = remember(uiState.tabs.size) { uiState.tabs.indices.map { FocusRequester() } }
+    var gridHasFocus by remember { mutableStateOf(false) }
+    var gridScrollToTopTrigger by remember { mutableIntStateOf(0) }
+
+    // Grid Back: focus on grid -> move focus to active tab (grid stays scrolled).
+    BackHandler(enabled = gridHasFocus && uiState.tabs.size > 1) {
+        tabFocusRequesters.getOrNull(uiState.selectedTabIndex)?.let { runCatching { it.requestFocus() } }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl, top = NuvioTheme.spacing.sm, bottom = NuvioTheme.spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+    ) {
+        Text(
+            text = folder.title,
+            style = MaterialTheme.typography.headlineMedium.copy(
+                textDirection = folder.title.contentTextDirection()
+            ),
+            color = NuvioTheme.colors.TextPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = 300.dp)
+        )
+
+        if (uiState.tabs.size > 1) {
+            TabRow(
+                selectedTabIndex = uiState.selectedTabIndex,
+                modifier = Modifier
+                    .focusRestorer {
+                        tabFocusRequesters.getOrNull(uiState.selectedTabIndex) ?: FocusRequester.Default
+                    }
+            ) {
+                uiState.tabs.forEachIndexed { index, tab ->
+                    Tab(
+                        selected = index == uiState.selectedTabIndex,
+                        onFocus = { onSelectTab(index) },
+                        onClick = {
+                            onSelectTab(index)
+                            gridScrollToTopTrigger++
+                        },
+                        modifier = if (index < tabFocusRequesters.size) {
+                            Modifier.focusRequester(tabFocusRequesters[index])
+                        } else Modifier
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = NuvioTheme.spacing.lg, vertical = NuvioTheme.spacing.sm),
+                            horizontalAlignment = Alignment.Start
+                        ) {
+                            Text(
+                                text = if (tab.isAllTab) stringResource(R.string.collections_tab_all) else tab.label,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                            if (uiState.catalogTypeSuffixEnabled && tab.typeLabel.isNotBlank()) {
+                                val localizedType = when {
+                                    tab.isAllTab -> stringResource(R.string.collections_tab_combined)
+                                    tab.rawType.lowercase() == "movie" -> stringResource(R.string.type_movie)
+                                    tab.rawType.lowercase() == "series" -> stringResource(R.string.type_series)
+                                    else -> tab.typeLabel
+                                }
+                                Text(
+                                    text = localizedType,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = NuvioTheme.colors.TextTertiary
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val currentTab = uiState.tabs.getOrNull(uiState.selectedTabIndex)
+    if (currentTab == null) return
+
+    when {
+        currentTab.isLoading -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                LoadingIndicator()
+            }
+        }
+        currentTab.error != null -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = currentTab.error,
+                    color = NuvioTheme.colors.TextSecondary
+                )
+            }
+        }
+        currentTab.catalogRow != null -> {
+            val items = currentTab.catalogRow.items
+            androidx.compose.runtime.key(uiState.selectedTabIndex) {
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+            val gap = NuvioTheme.spacing.lg
+            val inset = NuvioTheme.spacing.xxxl
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val dateTopPadding = 10.dp
+            val dateHeight = with(density) { MaterialTheme.typography.labelMedium.lineHeight.toDp() }
+            val geometry = tabbedGridPreviewGeometry(
+                mode, maxWidth.value, maxHeight.value, (dateTopPadding + dateHeight).value,
+                LocalLandscapePosterMode.current, inset.value, gap.value
+            )
+            val rowHeight = geometry.rowHeight.dp
+            val cardWidth = geometry.cardWidth.dp
+            val posterCardStyle = PosterCardStyle(
+                width = cardWidth.coerceAtLeast(24.dp),
+                height = (cardWidth * 1.5f).coerceAtLeast(36.dp),
+                cornerRadius = uiState.posterCardCornerRadiusDp.dp,
+                focusedScale = 1.03f
+            )
+            val itemFocusRequesters = remember(uiState.selectedTabIndex) { mutableMapOf<String, FocusRequester>() }
+            var lastFocusedItemKey by remember(
+                uiState.selectedTabIndex,
+                tabFocusState.focusedItemKey
+            ) {
+                mutableStateOf(tabFocusState.focusedItemKey)
+            }
+            val gridState = rememberLazyGridState(
+                initialFirstVisibleItemIndex = tabFocusState.verticalScrollIndex,
+                initialFirstVisibleItemScrollOffset = tabFocusState.verticalScrollOffset
+            )
+
+            var focusedIndex by remember { mutableIntStateOf(-1) }
+            var firstRow by remember { mutableIntStateOf(tabFocusState.verticalScrollIndex / mode.columns) }
+            LaunchedEffect(focusedIndex) {
+                if (focusedIndex >= 0) {
+                    val target = mode.firstRow(focusedIndex / mode.columns, firstRow)
+                    firstRow = target
+                    gridState.animateScrollToItem(target * mode.columns)
+                }
+            }
+            LaunchedEffect(gridScrollToTopTrigger) {
+                if (gridScrollToTopTrigger > 0) {
+                    firstRow = 0
+                    gridState.scrollToItem(0)
+                }
+            }
+            DisposableEffect(Unit) {
+                onDispose {
+                    onSaveFocusState(
+                        gridState.firstVisibleItemIndex,
+                        gridState.firstVisibleItemScrollOffset,
+                        lastFocusedItemKey
+                    )
+                }
+            }
+
+            LaunchedEffect(tabFocusState.verticalScrollIndex, tabFocusState.verticalScrollOffset) {
+                val targetIndex = tabFocusState.verticalScrollIndex
+                val targetOffset = tabFocusState.verticalScrollOffset
+                if (gridState.firstVisibleItemIndex == targetIndex &&
+                    gridState.firstVisibleItemScrollOffset == targetOffset
+                ) {
+                    return@LaunchedEffect
+                }
+                if (targetIndex > 0 || targetOffset > 0) {
+                    gridState.scrollToItem(targetIndex, targetOffset)
+                }
+            }
+
+            var focusRestored by remember { mutableStateOf(false) }
+            LaunchedEffect(items, tabFocusState.hasSavedFocus, tabFocusState.focusedItemKey) {
+                if (focusRestored) return@LaunchedEffect
+                val targetKey = tabFocusState.focusedItemKey ?: return@LaunchedEffect
+                if (!tabFocusState.hasSavedFocus) return@LaunchedEffect
+                val requester = itemFocusRequesters[targetKey] ?: return@LaunchedEffect
+                repeat(2) { withFrameNanos { } }
+                if (runCatching { requester.requestFocus() }.isSuccess) {
+                    lastFocusedItemKey = targetKey
+                    focusRestored = true
+                }
+            }
+
+            val catalogRow = currentTab.catalogRow
+            LaunchedEffect(gridState, items.size) {
+                snapshotFlow {
+                    val lastVisible = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                    val total = gridState.layoutInfo.totalItemsCount
+                    lastVisible to total
+                }
+                    .distinctUntilChanged()
+                    .collect { (lastVisible, total) ->
+                        if (total > 0 && lastVisible >= total - 10) {
+                            if (catalogRow != null && catalogRow.hasMore && !catalogRow.isLoading) {
+                                onLoadMore()
+                            }
+                        }
+                    }
+            }
+
+            val pageRemainder = ((items.size + mode.columns - 1) / mode.columns) % mode.rows
+            val pageBottomPadding = if (mode == TabbedGridPreview.PAGES && pageRemainder != 0)
+                (rowHeight + gap) * (mode.rows - pageRemainder) else 0.dp
+            val noAutomaticScroll = remember {
+                object : androidx.compose.foundation.gestures.BringIntoViewSpec {
+                    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float) = 0f
+                }
+            }
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides noAutomaticScroll
+            ) {
+            LazyVerticalGrid(
+                state = gridState,
+                columns = GridCells.Fixed(mode.columns),
+                modifier = Modifier
+                    .height(geometry.gridHeight.dp)
+                    .fillMaxWidth()
+                    .align(Alignment.Center)
+                    .onFocusChanged { gridHasFocus = it.hasFocus }
+                    .focusRestorer {
+                        lastFocusedItemKey?.let { itemFocusRequesters[it] } ?: FocusRequester.Default
+                    }
+                    .dpadRepeatThrottle(),
+                contentPadding = PaddingValues(
+                    start = NuvioTheme.spacing.xxxl,
+                    end = NuvioTheme.spacing.xxxl,
+                    top = 12.dp,
+                    bottom = 12.dp + pageBottomPadding
+                ),
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
+            ) {
+                itemsIndexed(
+                    items = items,
+                    key = { index, item -> "${item.id}_$index" }
+                ) { index, item ->
+                    val itemKey = "${item.id}_$index"
+                    val focusReq = itemFocusRequesters.getOrPut(itemKey) { FocusRequester() }
+                    val useDigitalDate = item.apiType == "movie"
+                    val digitalDate by produceState<String?>(null, item.id, useDigitalDate) {
+                        if (useDigitalDate) value = loadUsDigitalDate?.invoke(item.id)
+                    }
+                    GridContentCard(
+                        modifier = Modifier.height(rowHeight),
+                        item = item,
+                        yearLabelOverride = (if (item.apiType == "series") formatGridReleaseDate(item.released) else digitalDate)
+                            ?.uppercase(java.util.Locale.US),
+                        subtleReleaseDate = true,
+                        releaseLabelTopPadding = dateTopPadding,
+                        posterCardStyle = posterCardStyle,
+                        focusRequester = focusReq,
+                        isWatched = isItemWatched(item),
+                        showYearOnly = true,
+                        onFocused = { lastFocusedItemKey = itemKey; focusedIndex = index },
+                        onClick = {
+                            HeroBackdropState.update(item.backdropUrl)
+                            onNavigateToDetail(
+                                item.id,
+                                item.apiType,
+                                currentTab.catalogRow.addonBaseUrl
+                            )
+                        },
+                        onLongPress = {
+                            lastFocusedItemKey = itemKey
+                            onItemLongPress(item, currentTab.catalogRow.addonBaseUrl)
+                        }
+                    )
+                }
+                if (catalogRow != null && catalogRow.isLoading) {
+                    item(
+                        key = "loading_more"
+                    ) {
+                        val cardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
+                        val cardDepthStyle = LocalCardDepthStyle.current
+                        val globalLandscape = LocalLandscapePosterMode.current
+                        val loadingCardHeight = if (globalLandscape) {
+                            posterCardStyle.width / com.nuvio.tv.domain.model.PosterShape.LANDSCAPE.aspectRatio()
+                        } else {
+                            posterCardStyle.width * 1.5f
+                        }
+                        Column(
+                            modifier = Modifier.width(posterCardStyle.width).height(rowHeight)
+                        ) {
+                            Card(
+                                onClick = {},
+                                modifier = Modifier
+                                    .width(posterCardStyle.width)
+                                    .height(loadingCardHeight)
+                                    .focusProperties { canFocus = false },
+                                shape = CardDefaults.shape(shape = cardShape),
+                                colors = CardDefaults.colors(
+                                    containerColor = NuvioTheme.colors.BackgroundCard,
+                                    focusedContainerColor = NuvioTheme.colors.BackgroundCard
+                                )
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(cardShape)
+                                        .nuvioCardDepth(
+                                            shape = cardShape,
+                                            surface = CardDepthSurface.POSTERS,
+                                            style = cardDepthStyle
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    LoadingIndicator()
+                                }
+                            }
+                            // Reserve space for title + release date to match ContentCard height
+                            Spacer(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = NuvioTheme.spacing.sm)
+                                    .height(
+                                        MaterialTheme.typography.titleMedium.lineHeight.value.dp +
+                                            MaterialTheme.typography.labelMedium.lineHeight.value.dp
+                                    )
+                            )
+                        }
+                    }
+                }
+            }
+            }
+            if (mode == TabbedGridPreview.CENTERED) {
+                val activeRow = (focusedIndex.takeIf { it >= 0 } ?: (tabFocusState.focusedItemKey
+                    ?.substringAfterLast('_')?.toIntOrNull() ?: tabFocusState.verticalScrollIndex)) / mode.columns
+                if (activeRow > 0) {
+                    androidx.tv.material3.Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.KeyboardArrowUp,
+                        contentDescription = "More titles above",
+                        tint = NuvioTheme.colors.TextSecondary.copy(alpha = 0.35f),
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp).size(24.dp)
+                    )
+                }
+                if ((activeRow + 1) * mode.columns < items.size || catalogRow.hasMore) {
+                    androidx.tv.material3.Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.KeyboardArrowDown,
+                        contentDescription = "More titles below",
+                        tint = NuvioTheme.colors.TextSecondary.copy(alpha = 0.35f),
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp).size(24.dp)
+                    )
+                }
+            }
+            }
             }
         }
     }
@@ -984,6 +1401,7 @@ private fun FollowLayoutContent(
             }
         }
         HomeLayout.MODERN -> ModernHomeContent(
+            fadeCollectionBottomRow = true,
             uiState = homeState,
             modernPresentation = homeState.modernHomePresentation,
             focusState = focusState,

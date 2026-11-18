@@ -281,9 +281,7 @@ class HomeViewModel @Inject constructor(
     internal val cwBadgeEpisodeCache: MutableMap<String, Set<Pair<Int, Int>>?> = createLruMap(MAX_CW_CACHE_SIZE)
     /** Per-series earliest upcoming season release date (epochMs) for smart TTL scheduling. */
     internal val cwBadgeNextSeasonMs: MutableMap<String, Long> = createLruMap(MAX_CW_CACHE_SIZE)
-    /** Snapshot of watchedShowEpisodes keys from the last badge evaluation cycle. */
-    @Volatile
-    internal var cwLastBadgeEpisodeKeys: Set<String> = emptySet()
+    internal val seriesBadgeProfileReady = MutableStateFlow<Int?>(null)
     /** Cached show ID siblings from the last badge evaluation cycle (for anime ID expansion). */
     @Volatile
     internal var cwLastShowIdSiblings: Map<String, Set<String>> = emptyMap()
@@ -368,6 +366,8 @@ class HomeViewModel @Inject constructor(
             observeModernHomePresentation()
             loadContinueWatching()
             watchedSeriesStateHolder.loadFromDisk()
+            seriesBadgeProfileReady.value = profileManager.activeProfileId.value
+            observeSeriesWatchedBadges()
             observeExternalMetaPrefetchPreference()
             observeContinueWatchingSortMode()
             loadHomeCatalogOrderPreference()
@@ -388,6 +388,7 @@ class HomeViewModel @Inject constructor(
             profileManager.activeProfileId.collect { newId ->
                 if (newId != previousProfileId) {
                     previousProfileId = newId
+                    seriesBadgeProfileReady.value = null
                     // Cancel old pipeline — prevents racing writes from stale coroutines.
                     cwPipelineJob?.cancel()
                     cwPipelineJob = null
@@ -405,7 +406,6 @@ class HomeViewModel @Inject constructor(
                     cwProcessedOlderSeedContentIds.clear()
                     cwEnrichedNextUpOverlay.clear()
                     cwEnrichedInProgressOverlay.clear()
-                    cwLastBadgeEpisodeKeys = emptySet()
                     cwLastShowIdSiblings = emptyMap()
                     _uiState.update {
                         it.copy(layoutPreferencesReady = false, continueWatchingItems = emptyList())
@@ -421,6 +421,7 @@ class HomeViewModel @Inject constructor(
                     _movieWatchedStatus.value = emptyMap()
                     _pendingWatchedBatch.value = emptyMap()
                     _uiState.update { it.copy(movieWatchedStatus = emptyMap()) }
+                    seriesBadgeProfileReady.value = newId
                 }
             }
         }
@@ -459,7 +460,6 @@ class HomeViewModel @Inject constructor(
         cwProcessedOlderSeedContentIds.clear()
         cwEnrichedNextUpOverlay.clear()
         cwEnrichedInProgressOverlay.clear()
-        cwLastBadgeEpisodeKeys = emptySet()
         cwLastShowIdSiblings = emptyMap()
         watchedSeriesStateHolder.clearValidationState()
         _uiState.update { it.copy(continueWatchingItems = emptyList(), upcomingItems = emptyList()) }
