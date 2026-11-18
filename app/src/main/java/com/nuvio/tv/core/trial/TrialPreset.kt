@@ -31,11 +31,18 @@ class TrialPreset @Inject constructor(
     private val experience: ExperienceModeDataStore,
     private val onboarding: AppOnboardingDataStore,
     private val collections: CollectionsDataStore,
-    private val addons: AddonRepository
+    private val addons: AddonRepository,
+    private val tmdbSettings: TmdbSettingsDataStore
 ) {
     suspend fun prepare() = withContext(Dispatchers.IO) {
         if (!BuildConfig.TRIAL_ENABLED) return@withContext
         val marker = context.getSharedPreferences("epislate_trial_preset", Context.MODE_PRIVATE)
+        // Independent one-time migration: upgrades must not re-import collections,
+        // reset the selected layout/profile, or touch watched/progress stores.
+        if (!marker.getBoolean("tmdb_enrichment_v1_applied", false)) {
+            tmdbSettings.setEnabled(true)
+            check(marker.edit().putBoolean("tmdb_enrichment_v1_applied", true).commit())
+        }
         if (marker.getBoolean("v1_applied", false)) return@withContext
         val preset = context.assets.open("trial-preset.json").bufferedReader().use { JSONObject(it.readText()) }
         val urls = preset.getJSONArray("addonUrls")
