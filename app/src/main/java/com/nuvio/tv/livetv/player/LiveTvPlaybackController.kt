@@ -601,12 +601,9 @@ class LiveTvPlaybackController @Inject constructor(
         startPaused: Boolean = false,
         resumePositionMs: Long? = null
     ) {
-<<<<<<< HEAD
         if (!com.nuvio.tv.core.trial.TrialAccess.get(context).canStart()) return
         com.nuvio.tv.core.trial.TrialSessions.enter("live")
-=======
         backgroundResumeSeekMs = resumePositionMs
->>>>>>> v1.0.0-beta.4
         // Something chosen to play (back from the background through a launcher row, say):
         // that wins over picking up what was on before.
         resumeAfterBackground = null
