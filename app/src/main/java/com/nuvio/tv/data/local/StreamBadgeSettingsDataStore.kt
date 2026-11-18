@@ -67,8 +67,11 @@ class StreamBadgeSettingsDataStore @Inject constructor(
         )
     }
 
-    suspend fun setStreamBadgeRules(rules: StreamBadgeRules) {
-        store().edit {
+    suspend fun setStreamBadgeRules(
+        rules: StreamBadgeRules,
+        profileId: Int = profileManager.activeProfileId.value
+    ) {
+        store(profileId).edit {
             val normalized = rules.normalized()
             if (normalized.hasImport) {
                 it[streamBadgeRulesKey] = json.encodeToString(normalized)

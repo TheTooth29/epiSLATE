@@ -401,6 +401,7 @@ android.defaultConfig.buildConfigField(
 
 if (invitationTrialBuild) {
     android.sourceSets.getByName("main").assets.srcDir("src/trialPreset/assets")
+    android.sourceSets.getByName("main").assets.srcDir("src/trialDefaults/assets")
 }
 
 val livetvBuildNumber = (findProperty("livetvBuildNumber") as String?)?.toIntOrNull() ?: 7

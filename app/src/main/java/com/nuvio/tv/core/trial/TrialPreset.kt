@@ -13,6 +13,9 @@ import com.nuvio.tv.data.local.*
 import com.nuvio.tv.domain.model.*
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.streams.StreamBadgeRules
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import com.nuvio.tv.core.sync.homeCatalogKey
 import com.nuvio.tv.core.sync.homeCollectionKey
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -32,7 +35,8 @@ class TrialPreset @Inject constructor(
     private val onboarding: AppOnboardingDataStore,
     private val collections: CollectionsDataStore,
     private val addons: AddonRepository,
-    private val tmdbSettings: TmdbSettingsDataStore
+    private val tmdbSettings: TmdbSettingsDataStore,
+    private val streamBadges: StreamBadgeSettingsDataStore
 ) {
     suspend fun prepare() = withContext(Dispatchers.IO) {
         if (!BuildConfig.TRIAL_ENABLED) return@withContext
@@ -42,6 +46,15 @@ class TrialPreset @Inject constructor(
         if (!marker.getBoolean("tmdb_enrichment_v1_applied", false)) {
             tmdbSettings.setEnabled(true)
             check(marker.edit().putBoolean("tmdb_enrichment_v1_applied", true).commit())
+        }
+        if (!marker.getBoolean("stream_badges_v1_applied", false)) {
+            val rules = context.assets.open("trial-badge-rules.json").bufferedReader().use {
+                Json.decodeFromString<StreamBadgeRules>(it.readText()).normalized()
+            }
+            require(rules.hasImport && rules.enabledFilterCount > 0)
+            // Explicit primary Trial profile avoids active-profile startup races.
+            streamBadges.setStreamBadgeRules(rules, profileId = 1)
+            check(marker.edit().putBoolean("stream_badges_v1_applied", true).commit())
         }
         if (marker.getBoolean("v1_applied", false)) return@withContext
         val preset = context.assets.open("trial-preset.json").bufferedReader().use { JSONObject(it.readText()) }
