@@ -141,6 +141,9 @@ android {
     defaultConfig {
         applicationId = "com.nuvio.tv"
         buildConfigField("boolean", "TRIAL_ENABLED", invitationTrialBuild.toString())
+        val trialBuildNumber = providers.gradleProperty("epislateTrialBuildNumber").orNull?.toIntOrNull() ?: 0
+        require(trialBuildNumber in 0..1000000) { "Invalid Trial build number" }
+        buildConfigField("int", "TRIAL_BUILD_NUMBER", (if (invitationTrialBuild) trialBuildNumber else 0).toString())
         if (invitationTrialBuild) {
             versionNameSuffix = "-trial"
         }

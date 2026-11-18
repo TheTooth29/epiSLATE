@@ -94,14 +94,19 @@ internal class OnlineTrialAccess(
         }
         val jwk = JSONObject().put("kty", "EC").put("crv", "P-256")
             .put("x", coordinate(public.w.affineX)).put("y", coordinate(public.w.affineY))
-        val challenge = post("challenge", JSONObject().put("public_key", jwk).put("action", action)).getString("challenge")
+        val challengeReply = post("challenge", JSONObject().put("public_key", jwk).put("action", action))
+        val challenge = challengeReply.getString("challenge")
+        val build = TrialBuildReport.negotiate(challengeReply, TrialBuildReport.current())
         val der = Signature.getInstance("SHA256withECDSA").apply {
             initSign(store.getKey(alias, null) as java.security.PrivateKey)
-            update((challenge + "\n" + if (action == "redeem") code else "").toByteArray(Charsets.UTF_8))
+            update(TrialBuildReport.message(challenge, action, code, build).toByteArray(Charsets.UTF_8))
         }.sign()
         val signature = TrialSignature.p1363(der).joinToString("") { "%02x".format(it.toInt() and 255) }
         return post(action, JSONObject().put("public_key", jwk).put("challenge", challenge)
-            .put("signature", signature).apply { if (action == "redeem") put("code", code) })
+            .put("signature", signature).apply {
+                if (action == "redeem") put("code", code)
+                build?.attach(this)
+            })
     }
 
     private fun post(path: String, body: JSONObject): JSONObject {
