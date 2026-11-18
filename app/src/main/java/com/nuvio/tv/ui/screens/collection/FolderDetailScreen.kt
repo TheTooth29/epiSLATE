@@ -73,6 +73,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Tab
 import androidx.tv.material3.TabRow
+import androidx.tv.material3.TabDefaults
+import androidx.tv.material3.TabRowDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.nuvio.tv.domain.model.FolderViewMode
@@ -346,6 +348,7 @@ private fun OriginalTabbedGridContent(
     var gridHasFocus by remember { mutableStateOf(false) }
     var gridScrollToTopTrigger by remember { mutableIntStateOf(0) }
     var firstPosterRequest by remember { mutableIntStateOf(0) }
+    val posterEntry = remember(folder.id) { com.nuvio.tv.core.trial.TrialGridEntryPolicy() }
     val gridEntryFocus = remember { FocusRequester() }
     LaunchedEffect(folder.id, uiState.tabs.isNotEmpty()) {
         if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && uiState.tabs.isNotEmpty()) {
@@ -356,7 +359,7 @@ private fun OriginalTabbedGridContent(
     }
 
     // Grid Back: focus on grid -> move focus to active tab (grid stays scrolled).
-    BackHandler(enabled = gridHasFocus && uiState.tabs.size > 1) {
+    BackHandler(enabled = gridHasFocus && (uiState.tabs.size > 1 || (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && uiState.tabs.isNotEmpty()))) {
         tabFocusRequesters.getOrNull(uiState.selectedTabIndex)?.let { runCatching { it.requestFocus() } }
     }
 
@@ -381,6 +384,14 @@ private fun OriginalTabbedGridContent(
         if (uiState.tabs.size > 1 || (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && uiState.tabs.isNotEmpty())) {
             TabRow(
                 selectedTabIndex = uiState.selectedTabIndex,
+                indicator = { positions, focused ->
+                    positions.getOrNull(uiState.selectedTabIndex)?.let { position ->
+                        TabRowDefaults.PillIndicator(position, focused,
+                            activeColor = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED)
+                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
+                                else MaterialTheme.colorScheme.onSurface)
+                    }
+                },
                 modifier = Modifier
                     .focusRestorer {
                         tabFocusRequesters.getOrNull(uiState.selectedTabIndex) ?: FocusRequester.Default
@@ -388,17 +399,33 @@ private fun OriginalTabbedGridContent(
             ) {
                 uiState.tabs.forEachIndexed { index, tab ->
                     Tab(
+                        colors = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) TabDefaults.pillIndicatorTabColors(
+                            focusedContentColor = Color.White, focusedSelectedContentColor = Color.White,
+                            selectedContentColor = NuvioTheme.colors.TextSecondary
+                        ) else TabDefaults.pillIndicatorTabColors(),
                         selected = index == uiState.selectedTabIndex,
-                        onFocus = { onSelectTab(index) },
+                        onFocus = {
+                            if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) posterEntry.cancel()
+                            onSelectTab(index)
+                        },
                         onClick = {
                             onSelectTab(index)
                             gridScrollToTopTrigger++
                         },
                         modifier = if (index < tabFocusRequesters.size) {
-                            Modifier.focusRequester(tabFocusRequesters[index]).onPreviewKeyEvent { event ->
+                            Modifier.focusRequester(tabFocusRequesters[index])
+                                .then(if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) Modifier.focusProperties {
+                                    left = tabFocusRequesters.getOrNull(index - 1) ?: FocusRequester.Cancel
+                                    right = tabFocusRequesters.getOrNull(index + 1) ?: FocusRequester.Cancel
+                                    up = FocusRequester.Cancel
+                                } else Modifier)
+                                .onPreviewKeyEvent { event ->
                                 if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED &&
                                     event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
-                                    if (event.type == KeyEventType.KeyDown) firstPosterRequest++
+                                    if (event.type == KeyEventType.KeyDown) {
+                                        posterEntry.request(index)
+                                        firstPosterRequest++
+                                    }
                                     true
                                 } else false
                             }
@@ -464,8 +491,8 @@ private fun OriginalTabbedGridContent(
                 mutableStateOf(tabFocusState.focusedItemKey)
             }
             val gridState = rememberLazyGridState(
-                initialFirstVisibleItemIndex = tabFocusState.verticalScrollIndex,
-                initialFirstVisibleItemScrollOffset = tabFocusState.verticalScrollOffset
+                initialFirstVisibleItemIndex = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) 0 else tabFocusState.verticalScrollIndex,
+                initialFirstVisibleItemScrollOffset = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) 0 else tabFocusState.verticalScrollOffset
             )
 
             // Scroll grid to top when OK is pressed on a tab or tab changes
@@ -486,6 +513,7 @@ private fun OriginalTabbedGridContent(
             }
 
             LaunchedEffect(tabFocusState.verticalScrollIndex, tabFocusState.verticalScrollOffset) {
+                if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) return@LaunchedEffect
                 val targetIndex = tabFocusState.verticalScrollIndex
                 val targetOffset = tabFocusState.verticalScrollOffset
                 if (gridState.firstVisibleItemIndex == targetIndex &&
@@ -509,11 +537,14 @@ private fun OriginalTabbedGridContent(
                 }
             }
 
-            LaunchedEffect(firstPosterRequest) {
-                if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && firstPosterRequest > 0 && items.isNotEmpty()) {
+            LaunchedEffect(firstPosterRequest, items.size) {
+                if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && posterEntry.targets(uiState.selectedTabIndex) && items.isNotEmpty()) {
                     gridState.scrollToItem(0)
-                    withFrameNanos { }
-                    runCatching { gridEntryFocus.requestFocus() }
+                    repeat(2) { withFrameNanos { } }
+                    if (posterEntry.targets(uiState.selectedTabIndex) &&
+                        runCatching { gridEntryFocus.requestFocus(androidx.compose.ui.focus.FocusDirection.Enter) }.getOrDefault(false)) {
+                        posterEntry.completed(uiState.selectedTabIndex)
+                    }
                 }
             }
             val catalogRow = currentTab.catalogRow
@@ -540,9 +571,9 @@ private fun OriginalTabbedGridContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .onFocusChanged { gridHasFocus = it.hasFocus }
-                    .focusRestorer {
+                    .then(if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) Modifier else Modifier.focusRestorer {
                         lastFocusedItemKey?.let { itemFocusRequesters[it] } ?: FocusRequester.Default
-                    }
+                    })
                     .dpadRepeatThrottle(),
                 contentPadding = PaddingValues(
                     start = NuvioTheme.spacing.xxxl,
@@ -558,7 +589,8 @@ private fun OriginalTabbedGridContent(
                     key = { index, item -> "${item.id}_$index" }
                 ) { index, item ->
                     val itemKey = "${item.id}_$index"
-                    val focusReq = itemFocusRequesters.getOrPut(itemKey) { FocusRequester() }
+                    val focusReq = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && index == 0) gridEntryFocus
+                        else itemFocusRequesters.getOrPut(itemKey) { FocusRequester() }
                     val useDigitalDate = item.apiType == "movie"
                     val digitalDate by produceState<String?>(null, item.id, useDigitalDate) {
                         if (useDigitalDate) value = loadUsDigitalDate?.invoke(item.id)
@@ -566,8 +598,6 @@ private fun OriginalTabbedGridContent(
                     GridContentCard(
                         item = item,
                         showNeutralOutline = com.nuvio.tv.BuildConfig.TRIAL_ENABLED,
-                        modifier = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && index == 0)
-                            Modifier.focusRequester(gridEntryFocus) else Modifier,
                         yearLabelOverride = (if (item.apiType == "series") formatGridReleaseDate(item.released) else digitalDate)
                             ?.uppercase(java.util.Locale.US),
                         subtleReleaseDate = true,
@@ -668,6 +698,7 @@ private fun PreviewTabbedGridContent(
     var gridHasFocus by remember { mutableStateOf(false) }
     var gridScrollToTopTrigger by remember { mutableIntStateOf(0) }
     var firstPosterRequest by remember { mutableIntStateOf(0) }
+    val posterEntry = remember(folder.id) { com.nuvio.tv.core.trial.TrialGridEntryPolicy() }
     val gridEntryFocus = remember { FocusRequester() }
     LaunchedEffect(folder.id, uiState.tabs.isNotEmpty()) {
         if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && uiState.tabs.isNotEmpty()) {
@@ -678,7 +709,7 @@ private fun PreviewTabbedGridContent(
     }
 
     // Grid Back: focus on grid -> move focus to active tab (grid stays scrolled).
-    BackHandler(enabled = gridHasFocus && uiState.tabs.size > 1) {
+    BackHandler(enabled = gridHasFocus && (uiState.tabs.size > 1 || (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && uiState.tabs.isNotEmpty()))) {
         tabFocusRequesters.getOrNull(uiState.selectedTabIndex)?.let { runCatching { it.requestFocus() } }
     }
 
@@ -703,6 +734,14 @@ private fun PreviewTabbedGridContent(
         if (uiState.tabs.size > 1 || (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && uiState.tabs.isNotEmpty())) {
             TabRow(
                 selectedTabIndex = uiState.selectedTabIndex,
+                indicator = { positions, focused ->
+                    positions.getOrNull(uiState.selectedTabIndex)?.let { position ->
+                        TabRowDefaults.PillIndicator(position, focused,
+                            activeColor = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED)
+                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
+                                else MaterialTheme.colorScheme.onSurface)
+                    }
+                },
                 modifier = Modifier
                     .focusRestorer {
                         tabFocusRequesters.getOrNull(uiState.selectedTabIndex) ?: FocusRequester.Default
@@ -710,17 +749,33 @@ private fun PreviewTabbedGridContent(
             ) {
                 uiState.tabs.forEachIndexed { index, tab ->
                     Tab(
+                        colors = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) TabDefaults.pillIndicatorTabColors(
+                            focusedContentColor = Color.White, focusedSelectedContentColor = Color.White,
+                            selectedContentColor = NuvioTheme.colors.TextSecondary
+                        ) else TabDefaults.pillIndicatorTabColors(),
                         selected = index == uiState.selectedTabIndex,
-                        onFocus = { onSelectTab(index) },
+                        onFocus = {
+                            if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) posterEntry.cancel()
+                            onSelectTab(index)
+                        },
                         onClick = {
                             onSelectTab(index)
                             gridScrollToTopTrigger++
                         },
                         modifier = if (index < tabFocusRequesters.size) {
-                            Modifier.focusRequester(tabFocusRequesters[index]).onPreviewKeyEvent { event ->
+                            Modifier.focusRequester(tabFocusRequesters[index])
+                                .then(if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) Modifier.focusProperties {
+                                    left = tabFocusRequesters.getOrNull(index - 1) ?: FocusRequester.Cancel
+                                    right = tabFocusRequesters.getOrNull(index + 1) ?: FocusRequester.Cancel
+                                    up = FocusRequester.Cancel
+                                } else Modifier)
+                                .onPreviewKeyEvent { event ->
                                 if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED &&
                                     event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
-                                    if (event.type == KeyEventType.KeyDown) firstPosterRequest++
+                                    if (event.type == KeyEventType.KeyDown) {
+                                        posterEntry.request(index)
+                                        firstPosterRequest++
+                                    }
                                     true
                                 } else false
                             }
@@ -800,12 +855,13 @@ private fun PreviewTabbedGridContent(
                 mutableStateOf(tabFocusState.focusedItemKey)
             }
             val gridState = rememberLazyGridState(
-                initialFirstVisibleItemIndex = tabFocusState.verticalScrollIndex,
-                initialFirstVisibleItemScrollOffset = tabFocusState.verticalScrollOffset
+                initialFirstVisibleItemIndex = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) 0 else tabFocusState.verticalScrollIndex,
+                initialFirstVisibleItemScrollOffset = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) 0 else tabFocusState.verticalScrollOffset
             )
 
             var focusedIndex by remember { mutableIntStateOf(-1) }
-            var firstRow by remember { mutableIntStateOf(tabFocusState.verticalScrollIndex / mode.columns) }
+            var firstRow by remember { mutableIntStateOf(
+                if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) 0 else tabFocusState.verticalScrollIndex / mode.columns) }
             LaunchedEffect(focusedIndex) {
                 if (focusedIndex >= 0) {
                     val target = mode.firstRow(focusedIndex / mode.columns, firstRow)
@@ -830,6 +886,7 @@ private fun PreviewTabbedGridContent(
             }
 
             LaunchedEffect(tabFocusState.verticalScrollIndex, tabFocusState.verticalScrollOffset) {
+                if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) return@LaunchedEffect
                 val targetIndex = tabFocusState.verticalScrollIndex
                 val targetOffset = tabFocusState.verticalScrollOffset
                 if (gridState.firstVisibleItemIndex == targetIndex &&
@@ -856,11 +913,14 @@ private fun PreviewTabbedGridContent(
                 }
             }
 
-            LaunchedEffect(firstPosterRequest) {
-                if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && firstPosterRequest > 0 && items.isNotEmpty()) {
+            LaunchedEffect(firstPosterRequest, items.size) {
+                if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && posterEntry.targets(uiState.selectedTabIndex) && items.isNotEmpty()) {
                     gridState.scrollToItem(0)
-                    withFrameNanos { }
-                    runCatching { gridEntryFocus.requestFocus() }
+                    repeat(2) { withFrameNanos { } }
+                    if (posterEntry.targets(uiState.selectedTabIndex) &&
+                        runCatching { gridEntryFocus.requestFocus(androidx.compose.ui.focus.FocusDirection.Enter) }.getOrDefault(false)) {
+                        posterEntry.completed(uiState.selectedTabIndex)
+                    }
                 }
             }
             val catalogRow = currentTab.catalogRow
@@ -899,9 +959,9 @@ private fun PreviewTabbedGridContent(
                     .fillMaxWidth()
                     .align(Alignment.Center)
                     .onFocusChanged { gridHasFocus = it.hasFocus }
-                    .focusRestorer {
+                    .then(if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) Modifier else Modifier.focusRestorer {
                         lastFocusedItemKey?.let { itemFocusRequesters[it] } ?: FocusRequester.Default
-                    }
+                    })
                     .dpadRepeatThrottle(),
                 contentPadding = PaddingValues(
                     start = NuvioTheme.spacing.xxxl,
@@ -917,15 +977,14 @@ private fun PreviewTabbedGridContent(
                     key = { index, item -> "${item.id}_$index" }
                 ) { index, item ->
                     val itemKey = "${item.id}_$index"
-                    val focusReq = itemFocusRequesters.getOrPut(itemKey) { FocusRequester() }
+                    val focusReq = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && index == 0) gridEntryFocus
+                        else itemFocusRequesters.getOrPut(itemKey) { FocusRequester() }
                     val useDigitalDate = item.apiType == "movie"
                     val digitalDate by produceState<String?>(null, item.id, useDigitalDate) {
                         if (useDigitalDate) value = loadUsDigitalDate?.invoke(item.id)
                     }
                     GridContentCard(
-                        modifier = Modifier.height(rowHeight).then(
-                            if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && index == 0)
-                                Modifier.focusRequester(gridEntryFocus) else Modifier),
+                        modifier = Modifier.height(rowHeight),
                         showNeutralOutline = com.nuvio.tv.BuildConfig.TRIAL_ENABLED,
                         item = item,
                         yearLabelOverride = (if (item.apiType == "series") formatGridReleaseDate(item.released) else digitalDate)
@@ -934,6 +993,8 @@ private fun PreviewTabbedGridContent(
                         releaseLabelTopPadding = dateTopPadding,
                         posterCardStyle = posterCardStyle,
                         focusRequester = focusReq,
+                        upFocusRequester = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && index < mode.columns)
+                            tabFocusRequesters.getOrNull(uiState.selectedTabIndex) else null,
                         isWatched = isItemWatched(item),
                         showYearOnly = true,
                         onFocused = { lastFocusedItemKey = itemKey; focusedIndex = index },
