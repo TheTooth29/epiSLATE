@@ -202,6 +202,9 @@ internal fun ModernSidebarBlurPanel(
         // logo as pages were added.
         val renderItem: @Composable (Int, DrawerItem) -> Unit = { index, item ->
             key(item.route) {
+                var trialSettingsFocus by remember { mutableStateOf(false) }
+                val trialSettingsLocked = com.nuvio.tv.BuildConfig.TRIAL_ENABLED && item.route == "settings" &&
+                    !com.nuvio.tv.core.trial.TrialAdminSession.unlocked
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -225,6 +228,7 @@ internal fun ModernSidebarBlurPanel(
                         labelAlpha = sidebarLabelAlpha,
                         iconScale = sidebarIconScale,
                         onFocusChanged = {
+                            trialSettingsFocus = it
                             if (it) {
                                 onDrawerItemFocused(index)
                             }
@@ -233,9 +237,12 @@ internal fun ModernSidebarBlurPanel(
                         // Live TV fork: recording dot.
                         badge = item.badge,
                         modifier = Modifier
+                            .graphicsLayer { alpha = if (trialSettingsLocked) 0.45f else 1f }
                             .fillMaxWidth(0.92f)
                             .focusRequester(drawerItemFocusRequesters.getValue(item.route))
                     )
+                    if (trialSettingsLocked && trialSettingsFocus) Text("Not available in the trial version.",
+                        color = Color.White, modifier = Modifier.padding(horizontal = 12.dp))
                 }
             }
         }

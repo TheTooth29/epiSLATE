@@ -48,7 +48,22 @@ import kotlinx.coroutines.withContext
 import java.text.DateFormat
 import java.util.Date
 
-private class SettingsVisit { var unlocked by mutableStateOf(false) }
+object TrialAdminSession {
+    var unlocked by mutableStateOf(false)
+    private var clicks = 0
+    fun reset() { unlocked = false; clicks = 0 }
+    fun enterSettings(): Boolean {
+        if (!BuildConfig.TRIAL_ENABLED || unlocked) return true
+        clicks++
+        return (clicks >= 7).also { if (it) clicks = 0 }
+    }
+}
+object TrialExitSession { var requested by mutableStateOf(false) }
+private class SettingsVisit {
+    var unlocked: Boolean
+        get() = TrialAdminSession.unlocked
+        set(value) { TrialAdminSession.unlocked = value }
+}
 private val LocalSettingsVisit = staticCompositionLocalOf { SettingsVisit() }
 private val LocalTrialBack = staticCompositionLocalOf<() -> Unit> { {} }
 
@@ -72,33 +87,41 @@ fun TrialAppGate(onExit: () -> Unit, content: @Composable () -> Unit) {
     // Reading revision ensures ending the last finishing session immediately closes the app surface.
     @Suppress("UNUSED_VARIABLE") val observedRevision = revision
     val settingsVisit = remember { SettingsVisit() }
+    var activationWelcome by remember { mutableStateOf(false) }
+    var awaitingActivation by remember { mutableStateOf(snapshot.status == TrialStatus.NEEDS_CODE) }
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) settingsVisit.unlocked = false
+            if (event == Lifecycle.Event.ON_STOP) TrialAdminSession.reset()
         }
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
     CompositionLocalProvider(LocalSettingsVisit provides settingsVisit) {
+        Box(Modifier.fillMaxSize()) {
         when {
+            awaitingActivation -> TrialActivationScreen(onExit) {
+                activationWelcome = true
+                awaitingActivation = false
+            }
+            snapshot.status == TrialStatus.ACTIVE && activationWelcome -> TrialWelcomeScreen { activationWelcome = false }
             snapshot.status == TrialStatus.ACTIVE || (snapshot.status != TrialStatus.NEEDS_CODE && TrialSessions.hasPlayback()) -> {
                 content()
             }
             snapshot.status == TrialStatus.CONNECTION_REQUIRED -> TrialConnectionScreen(onExit)
-            snapshot.status == TrialStatus.NEEDS_CODE -> TrialActivationScreen(onExit)
+            snapshot.status == TrialStatus.NEEDS_CODE -> TrialActivationScreen(onExit) { activationWelcome = true }
             else -> TrialEndedScreen(onExit)
+        }
+        // Overlay preserves navigation/profile state when choosing Keep exploring.
+        if (TrialExitSession.requested) TrialExitScreen(snapshot,
+            onStay = { TrialExitSession.requested = false },
+            onExit = { TrialExitSession.requested = false; onExit() })
         }
     }
 }
 
 @Composable
 fun TrialNavigationSession(navController: NavHostController, content: @Composable () -> Unit) {
-    val entry by navController.currentBackStackEntryAsState()
-    val visit = LocalSettingsVisit.current
-    LaunchedEffect(entry?.destination?.route) {
-        if (!TrialPolicy.isSettingsRoute(entry?.destination?.route.orEmpty())) visit.unlocked = false
-    }
     CompositionLocalProvider(LocalTrialBack provides {
         if (!navController.popBackStack()) navController.navigate("home") { launchSingleTop = true }
     }) { content() }
@@ -182,7 +205,7 @@ private fun NumericEntry(value: String, length: Int, label: String, masked: Bool
 }
 
 @Composable
-private fun TrialActivationScreen(onExit: () -> Unit) {
+private fun TrialActivationScreen(onExit: () -> Unit, onActivated: () -> Unit) {
     val access = TrialAccess.get(LocalContext.current)
     val scope = rememberCoroutineScope()
     var code by remember { mutableStateOf("") }
@@ -206,6 +229,7 @@ private fun TrialActivationScreen(onExit: () -> Unit) {
                 scope.launch {
                     val result = withContext(Dispatchers.IO) { access.redeem(code) }
                     activated = result == RedemptionResult.ACTIVATED
+                    if (activated) onActivated()
                     error = when (result) {
                         RedemptionResult.INVALID_CODE -> "That invitation code is not valid. Please check it."
                         RedemptionResult.ALREADY_STARTED -> "This installation has already started its trial."
@@ -221,6 +245,43 @@ private fun TrialActivationScreen(onExit: () -> Unit) {
         Spacer(Modifier.height(12.dp))
         TrialButton(modifier = Modifier.focusRequester(exitFocus).focusProperties { if (code.length == 6 && !busy && !activated) up = activateFocus }, enabled = !busy, onClick = onExit) { Text("Exit") }
     }
+}
+
+@Composable
+private fun TrialWelcomeScreen(onContinue: () -> Unit) {
+    val focus = remember { FocusRequester() }
+    BackHandler { }
+    TrialFrame("Your epiSLATE trial is active", "Your 72-hour trial has started. Enjoy exploring epiSLATE!") {
+        TrialButton(modifier = Modifier.focusRequester(focus), onClick = onContinue) { Text("Continue") }
+    }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+}
+
+@Composable
+private fun TrialExitScreen(snapshot: TrialSnapshot, onStay: () -> Unit, onExit: () -> Unit) {
+    val stay = remember { FocusRequester() }
+    val leave = remember { FocusRequester() }
+    BackHandler { /* Explicit button choice keeps the exit page on screen. */ }
+    val minutes = (snapshot.remainingMs.coerceAtLeast(0) + 59_999) / 60_000
+    val time = if (snapshot.status == TrialStatus.ACTIVE)
+        "You have ${minutes / 60} hours, ${minutes % 60} minutes left in your trial."
+        else if (snapshot.status == TrialStatus.EXPIRED) "Your trial is complete."
+        else "Connect to the internet to check your remaining trial time."
+    TrialFrame("Enjoying your sneak peek?", "Thanks for spending some time with epiSLATE!\n$time") {
+        Text("Ready for more epiSLATE?", color = Color.White, fontSize = 20.sp)
+        Spacer(Modifier.height(8.dp))
+        Text("Contact episl8.admin@gmail.com to ask about membership options after your trial.",
+            color = Color(0xFFCFD8E3), modifier = Modifier.widthIn(max = 620.dp))
+        Spacer(Modifier.height(24.dp))
+        TrialButton(modifier = Modifier.focusRequester(stay).focusProperties {
+            up = FocusRequester.Cancel; down = leave; left = FocusRequester.Cancel; right = FocusRequester.Cancel
+        }, onClick = onStay) { Text("Keep exploring") }
+        Spacer(Modifier.height(12.dp))
+        TrialButton(modifier = Modifier.focusRequester(leave).focusProperties {
+            up = stay; down = FocusRequester.Cancel; left = FocusRequester.Cancel; right = FocusRequester.Cancel
+        }, onClick = onExit) { Text("Exit epiSLATE") }
+    }
+    LaunchedEffect(Unit) { stay.requestFocus() }
 }
 
 @Composable

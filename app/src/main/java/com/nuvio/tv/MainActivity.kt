@@ -1229,7 +1229,7 @@ open class MainActivity : ComponentActivity() {
                                 }
                             }
                             liveTvPages.forEachIndexed { i, page -> add(if (i == 0) page.copy(sectionStart = true) else page) }
-                            if (!BuildConfig.TRIAL_ENABLED) add(
+                            add(
                                 DrawerItem(
                                     route = Screen.Settings.route,
                                     label = strNavSettings,
@@ -1253,7 +1253,9 @@ open class MainActivity : ComponentActivity() {
                         }
                     }
                     val handleExitApp: () -> Unit = {
-                        if (!confirmExitEnabled || backPressedOnce) {
+                        if (BuildConfig.TRIAL_ENABLED) {
+                            com.nuvio.tv.core.trial.TrialExitSession.requested = true
+                        } else if (!confirmExitEnabled || backPressedOnce) {
                             finishAffinity()
                             finishAndRemoveTask()
                             if (confirmExitEnabled) {
@@ -1812,6 +1814,9 @@ private fun LegacySidebarScaffold(
                     // being centred, which grew up into the logo as pages were added.
                     val renderItem: @Composable (DrawerItem) -> Unit = { item ->
                         key(item.route) {
+                            var trialSettingsFocus by remember { mutableStateOf(false) }
+                            val trialSettingsLocked = BuildConfig.TRIAL_ENABLED && item.route == Screen.Settings.route &&
+                                !com.nuvio.tv.core.trial.TrialAdminSession.unlocked
                             Column {
                                 if (item.sectionStart) {
                                     Box(
@@ -1831,7 +1836,9 @@ private fun LegacySidebarScaffold(
                                     expanded = isExpanded,
                                     badge = item.badge,
                                     trailingIcon = null,
-                                    onClick = {
+                                    onClick = click@{
+                                        if (item.route == Screen.Settings.route &&
+                                            !com.nuvio.tv.core.trial.TrialAdminSession.enterSettings()) return@click
                                         keyboardController?.hide()
                                         onNavigate(item.route)
                                         navigateToDrawerRoute(
@@ -1842,9 +1849,9 @@ private fun LegacySidebarScaffold(
                                         drawerState.setValue(DrawerValue.Closed)
                                         pendingContentFocusTransfer = currentRoute == item.route
                                     },
-                                    modifier = Modifier.focusRequester(
-                                        drawerItemFocusRequesters.getValue(item.route)
-                                    )
+                                    modifier = Modifier.onFocusChanged { trialSettingsFocus = it.hasFocus }
+                                        .graphicsLayer { alpha = if (trialSettingsLocked) 0.45f else 1f }
+                                        .focusRequester(drawerItemFocusRequesters.getValue(item.route))
                                         // Live TV fork: Up / Down go to the item above / below,
                                         // across the gap above Settings too (with fewer pages in
                                         // the menu, Down from the last one landed on the page).
@@ -1856,6 +1863,8 @@ private fun LegacySidebarScaffold(
                                         .width(itemWidth)
                                         .offset(x = NuvioTheme.spacing.md)
                                 )
+                                if (trialSettingsLocked && trialSettingsFocus) Text("Not available in the trial version.",
+                                    color = Color.White, modifier = Modifier.width(itemWidth).padding(horizontal = 12.dp))
                             }
                         }
                     }
@@ -2540,6 +2549,8 @@ private fun ModernSidebarScaffold(
                         drawerItemFocusRequesters = drawerItemFocusRequesters,
                         onDrawerItemFocused = { focusedDrawerIndex = it },
                         onDrawerItemClick = click@{ targetRoute ->
+                            if (targetRoute == Screen.Settings.route &&
+                                !com.nuvio.tv.core.trial.TrialAdminSession.enterSettings()) return@click
                             // Live TV fork: Live TV opens its list; its "‹ Live TV" row goes back.
                             if (targetRoute == LIVE_TV_GROUP_ROUTE) {
                                 if (drawerItems.none { it.isGroup && it.groupOpen }) pendingLiveTvListFocus = true
