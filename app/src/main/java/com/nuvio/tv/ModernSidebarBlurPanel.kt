@@ -50,6 +50,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.Icon
@@ -184,7 +185,7 @@ internal fun ModernSidebarBlurPanel(
                     .offset(y = NuvioTheme.spacing.md),
                 contentAlignment = Alignment.Center
             ) {
-                BrandWordmark(
+                if (!com.nuvio.tv.BuildConfig.TRIAL_ENABLED) BrandWordmark(
                     contentDescription = stringResource(R.string.app_name),
                     modifier = Modifier
                         .fillMaxWidth(0.72f)
@@ -241,7 +242,7 @@ internal fun ModernSidebarBlurPanel(
                             .fillMaxWidth(0.92f)
                             .focusRequester(drawerItemFocusRequesters.getValue(item.route))
                     )
-                    if (trialSettingsLocked && trialSettingsFocus) Text("Not available in the trial version.",
+                    if (trialSettingsLocked && trialSettingsFocus) Text("Not available in the trial version.", fontSize = 11.sp, lineHeight = 13.sp,
                         color = Color.White, modifier = Modifier.padding(horizontal = 12.dp))
                 }
             }

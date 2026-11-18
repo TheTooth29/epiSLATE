@@ -447,7 +447,13 @@ open class MainActivity : ComponentActivity() {
         captureDeepLinkIntent(intent)
 
         setContent {
-            com.nuvio.tv.core.trial.TrialAppGate(onExit = { finish() }) {
+            com.nuvio.tv.core.trial.TrialAppGate(onExit = {
+                if (BuildConfig.TRIAL_ENABLED) {
+                    runCatching { startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                    finishAffinity()
+                } else finish()
+            }) {
             com.nuvio.tv.core.trial.TrialPresetGate(trialPreset) {
             var hasSelectedProfileThisSession by rememberSaveable { mutableStateOf(false) }
             var startupSession by remember { mutableIntStateOf(0) }
@@ -1798,7 +1804,7 @@ private fun LegacySidebarScaffold(
                                     }
                                 }
                             } else {
-                                BrandWordmark(
+                                if (!com.nuvio.tv.BuildConfig.TRIAL_ENABLED) BrandWordmark(
                                     contentDescription = stringResource(R.string.app_name),
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -1863,7 +1869,7 @@ private fun LegacySidebarScaffold(
                                         .width(itemWidth)
                                         .offset(x = NuvioTheme.spacing.md)
                                 )
-                                if (trialSettingsLocked && trialSettingsFocus) Text("Not available in the trial version.",
+                                if (trialSettingsLocked && trialSettingsFocus) Text("Not available in the trial version.", fontSize = 11.sp, lineHeight = 13.sp,
                                     color = Color.White, modifier = Modifier.width(itemWidth).padding(horizontal = 12.dp))
                             }
                         }

@@ -1374,10 +1374,9 @@ private fun ModernCarouselCard(
         titleMedium.copy(fontWeight = FontWeight.Medium)
     }
 
+    Box(modifier = modifier.animatedWidth(animatedCardWidthState)) {
     Column(
-        modifier = modifier
-            .animatedWidth(animatedCardWidthState)
-            .recompositionHighlighter(),
+        modifier = Modifier.fillMaxWidth().recompositionHighlighter(),
         verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
     ) {
         LightweightCard(
@@ -1607,10 +1606,6 @@ private fun ModernCarouselCard(
             }
         }
 
-        if (trialUnavailable) {
-            Text(if (isFocused) "Not available in the trial version." else "", color = Color.White,
-                modifier = Modifier.height(34.dp), style = MaterialTheme.typography.labelMedium, maxLines = 2)
-        }
         if (showLabels && !isBackdropExpanded && item.title.isNotBlank()) {
             Column(
                 modifier = Modifier
@@ -1640,6 +1635,14 @@ private fun ModernCarouselCard(
                 }
             }
         }
+    }
+    if (trialUnavailable && isFocused) {
+        Text("Not available in the trial version.", color = Color.White,
+            fontSize = 12.sp, lineHeight = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                .background(Color(0xF2101923), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 5.dp),
+            maxLines = 2)
+    }
     }
 }
 
