@@ -56,6 +56,11 @@ class TrialPreset @Inject constructor(
             streamBadges.setStreamBadgeRules(rules, profileId = 1)
             check(marker.edit().putBoolean("stream_badges_v1_applied", true).commit())
         }
+        if (!marker.getBoolean("addon_logo_hidden_v1_applied", false)) {
+            // Apply once to the primary Trial profile without resetting its history or choices.
+            streamBadges.setShowAddonLogo(false, profileId = 1)
+            check(marker.edit().putBoolean("addon_logo_hidden_v1_applied", true).commit())
+        }
         if (!marker.getBoolean("browsing_defaults_v1_applied", false)) {
             layout.setCatalogTypeSuffixEnabled(false)
             layout.setFocusedPosterBackdropExpandEnabled(false)

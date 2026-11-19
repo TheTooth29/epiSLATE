@@ -85,8 +85,11 @@ class StreamBadgeSettingsDataStore @Inject constructor(
         store().edit { it[showFileSizeBadgesKey] = enabled }
     }
 
-    suspend fun setShowAddonLogo(enabled: Boolean) {
-        store().edit { it[showAddonLogoKey] = enabled }
+    suspend fun setShowAddonLogo(
+        enabled: Boolean,
+        profileId: Int = profileManager.activeProfileId.value
+    ) {
+        store(profileId).edit { it[showAddonLogoKey] = enabled }
     }
 
     suspend fun setStreamBadgePlacement(placement: StreamBadgePlacement) {
