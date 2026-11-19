@@ -248,8 +248,8 @@ private fun TrialActivationScreen(onExit: () -> Unit, onActivated: () -> Unit) {
                     activated = result == RedemptionResult.ACTIVATED
                     if (activated) onActivated()
                     error = when (result) {
-                        RedemptionResult.INVALID_CODE -> "That invitation code is not valid. Please check it."
-                        RedemptionResult.REVOKED_CODE -> "This invitation code has been canceled. Contact episl8.admin@gmail.com for a new code."
+                        RedemptionResult.INVALID_CODE -> "That invitation code is not valid."
+                        RedemptionResult.REVOKED_CODE -> "This invitation code has been canceled."
                         RedemptionResult.ALREADY_STARTED -> "This installation has already started its trial."
                         RedemptionResult.NETWORK_ERROR -> "Unable to connect. Check your internet connection and try again."
                         RedemptionResult.RATE_LIMITED -> "Too many attempts. Please wait a minute and try again. If this continues, contact your trial administrator."
