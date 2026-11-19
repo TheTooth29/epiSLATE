@@ -60,9 +60,10 @@ internal class OnlineTrialAccess(
             }
             RedemptionResult.ACTIVATED
         } catch (e: TrialRequestFailure) {
-            when (e.status) {
-                400, 403 -> RedemptionResult.INVALID_CODE
-                429 -> RedemptionResult.RATE_LIMITED
+            when {
+                e.status == 403 && e.reason == "invitation_revoked" -> RedemptionResult.REVOKED_CODE
+                e.status == 400 || e.status == 403 -> RedemptionResult.INVALID_CODE
+                e.status == 429 -> RedemptionResult.RATE_LIMITED
                 else -> RedemptionResult.NETWORK_ERROR
             }
         } catch (_: Exception) { RedemptionResult.NETWORK_ERROR }
@@ -120,12 +121,34 @@ internal class OnlineTrialAccess(
             connection.setRequestProperty("Content-Type", "application/json")
             connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             val status = connection.responseCode
-            if (status != 200) throw TrialRequestFailure(status)
+            if (status != 200) {
+                val text = runCatching {
+                    connection.errorStream?.bufferedReader()?.use { reader ->
+                        val buffer = CharArray(4097)
+                        var size = 0
+                        while (size < buffer.size) {
+                            val count = reader.read(buffer, size, buffer.size - size)
+                            if (count < 0) break
+                            size += count
+                        }
+                        if (size <= 4096) String(buffer, 0, size) else null
+                    }
+                }.getOrNull()
+                throw TrialRequestFailure.fromResponse(status, text)
+            }
             val text = connection.inputStream.bufferedReader().use { it.readText() }
             require(text.length <= 4096)
             return JSONObject(text)
         } finally { connection.disconnect() }
     }
-    private class TrialRequestFailure(val status: Int) : Exception()
+    internal class TrialRequestFailure(val status: Int, val reason: String = "") : Exception() {
+        companion object {
+            fun fromResponse(status: Int, text: String?): TrialRequestFailure {
+                val reason = if (text != null && text.length <= 4096)
+                    runCatching { JSONObject(text).optString("error") }.getOrDefault("") else ""
+                return TrialRequestFailure(status, reason)
+            }
+        }
+    }
 }
 

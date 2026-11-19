@@ -53,4 +53,29 @@ class OnlineTrialAccessTest {
         assertEquals(RedemptionResult.INVALID_CODE, access().redeem("123"))
         assertFalse(redeemed)
     }
+    @Test fun revokedInvitationHasDistinctResultWithoutStartingTrial() {
+        val access = OnlineTrialAccess(context, { elapsed }) { _, _ ->
+            throw OnlineTrialAccess.TrialRequestFailure.fromResponse(403, "{\"error\":\"invitation_revoked\"}")
+        }
+        assertEquals(RedemptionResult.REVOKED_CODE, access.redeem("123456"))
+        assertFalse(redeemed)
+        assertEquals(TrialStatus.NEEDS_CODE, access.snapshot().status)
+    }
+    @Test fun legacyMalformedAndUnrelatedErrorsKeepTheirOriginalClassification() {
+        val cases = listOf(
+            Triple(403, "{\"error\":\"activation_not_available\"}", RedemptionResult.INVALID_CODE),
+            Triple(403, "not JSON", RedemptionResult.INVALID_CODE),
+            Triple(403, null, RedemptionResult.INVALID_CODE),
+            Triple(400, "{\"error\":\"invitation_revoked\"}", RedemptionResult.INVALID_CODE),
+            Triple(429, "{\"error\":\"invitation_revoked\"}", RedemptionResult.RATE_LIMITED),
+            Triple(503, "{\"error\":\"invitation_revoked\"}", RedemptionResult.NETWORK_ERROR)
+        )
+        for ((status, body, expected) in cases) {
+            val access = OnlineTrialAccess(context, { elapsed }) { _, _ ->
+                throw OnlineTrialAccess.TrialRequestFailure.fromResponse(status, body)
+            }
+            assertEquals(expected, access.redeem("123456"))
+            assertFalse(redeemed)
+        }
+    }
 }
