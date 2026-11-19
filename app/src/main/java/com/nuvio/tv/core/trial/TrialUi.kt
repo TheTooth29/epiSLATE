@@ -302,11 +302,8 @@ private fun TrialExitScreen(snapshot: TrialSnapshot, onStay: () -> Unit, onExit:
         else if (snapshot.status == TrialStatus.EXPIRED) "Your trial is complete."
         else "Connect to the internet to check your remaining trial time."
     TrialFrame("Enjoying your sneak peek?", time) {
-        Text("Ready for more epiSLATE?", color = Color.White, fontSize = 20.sp)
-        Spacer(Modifier.height(8.dp))
-        Text("Contact episl8.admin@gmail.com to ask about subscription options after your trial.",
-            color = Color(0xFFCFD8E3), modifier = Modifier.widthIn(max = 620.dp))
-        Spacer(Modifier.height(24.dp))
+        TrialContactLine("Questions during your trial? Email ")
+        Spacer(Modifier.height(12.dp))
         TrialButton(modifier = Modifier.focusRequester(stay).focusProperties {
             up = FocusRequester.Cancel; down = leave; left = FocusRequester.Cancel; right = FocusRequester.Cancel
         }, onClick = onStay) { Text("Return to epiSLATE") }
