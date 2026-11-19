@@ -326,7 +326,7 @@ private fun TrialExitScreen(snapshot: TrialSnapshot, onStay: () -> Unit, onExit:
 @Composable
 fun TrialEndedScreen(onExit: () -> Unit = { }) {
     BackHandler(onBack = onExit)
-    TrialFrame("Your trial has ended", "Thanks for trying epiSLATE. Your 72-hour preview is complete.") {
+    TrialFrame("Your epiSLATE trial has ended", "Thanks for trying epiSLATE. Your 72-hour preview is complete.") {
         TrialContactLine("Interested in an epiSLATE subscription? Email ")
         Spacer(Modifier.height(12.dp))
         TrialButton(onClick = onExit) { Text("Close") }
