@@ -191,7 +191,9 @@ private fun TrialFrame(title: String, message: String, content: @Composable Colu
             Spacer(Modifier.height(20.dp))
             Text(title, color = Color.White, fontSize = 26.sp)
             Spacer(Modifier.height(12.dp))
-            Text(message, color = Color(0xFFCFD8E3), modifier = Modifier.widthIn(max = 620.dp))
+            Text(message, color = Color(0xFFCFD8E3), modifier = Modifier.widthIn(max = 620.dp),
+                fontSize = 17.sp, lineHeight = 24.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Spacer(Modifier.height(20.dp))
             content()
         }
@@ -239,7 +241,9 @@ private fun TrialActivationScreen(onExit: () -> Unit, onActivated: () -> Unit) {
             Text("Enjoy your epiSLATE trial.", color = Color.White)
         } else {
             NumericEntry(code, 6, "Invitation code", false, nextFocus = activateFocus) { code = it; error = null }
-            error?.let { Text(it, color = Color(0xFFFFB4AB)) }
+            error?.let { Text(it, color = Color(0xFFFFB4AB), fontSize = 17.sp, lineHeight = 24.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.widthIn(max = 620.dp)) }
             Spacer(Modifier.height(16.dp))
             TrialButton(modifier = Modifier.focusRequester(activateFocus).focusProperties { down = exitFocus }, enabled = code.length == 6 && !busy, onClick = {
                 busy = true
@@ -271,7 +275,8 @@ private fun TrialWelcomeScreen(onContinue: () -> Unit) {
     BackHandler { }
     TrialFrame("Your epiSLATE trial is active", "Your 72-hour trial has started. Enjoy exploring epiSLATE!") {
         TrialContactLine("Questions during your trial? Email ")
-        Spacer(Modifier.height(12.dp))
+        // Match TrialFrame's 20dp gap between the two body lines.
+        Spacer(Modifier.height(20.dp))
         TrialButton(modifier = Modifier.focusRequester(focus), onClick = onContinue) { Text("Continue") }
     }
     LaunchedEffect(Unit) { focus.requestFocus() }
@@ -303,7 +308,7 @@ private fun TrialExitScreen(snapshot: TrialSnapshot, onStay: () -> Unit, onExit:
         else "Connect to the internet to check your remaining trial time."
     TrialFrame("Enjoying your sneak peek?", time) {
         TrialContactLine("Questions during your trial? Email ")
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(20.dp))
         TrialButton(modifier = Modifier.focusRequester(stay).focusProperties {
             up = FocusRequester.Cancel; down = leave; left = FocusRequester.Cancel; right = FocusRequester.Cancel
         }, onClick = onStay) { Text("Return to epiSLATE") }
@@ -328,7 +333,7 @@ fun TrialEndedScreen(onExit: () -> Unit = { }) {
     BackHandler(onBack = onExit)
     TrialFrame("Your epiSLATE trial has ended", "Thanks for trying epiSLATE. Your 72-hour preview is complete.") {
         TrialContactLine("Interested in an epiSLATE subscription? Email ")
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(20.dp))
         TrialButton(onClick = onExit) { Text("Close") }
     }
 }
@@ -340,7 +345,8 @@ private fun TrialPinScreen(onCancel: () -> Unit, onUnlocked: () -> Unit) {
     BackHandler(onBack = onCancel)
     TrialFrame("Settings is locked", "Enter the master PIN to open Settings.") {
         NumericEntry(pin, 4, "PIN", true) { pin = it; error = false }
-        if (error) Text("Incorrect PIN. Please try again.", color = Color(0xFFFFB4AB))
+        if (error) Text("Incorrect PIN. Please try again.", color = Color(0xFFFFB4AB),
+            fontSize = 17.sp, lineHeight = 24.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             TrialButton(enabled = pin.length == 4, onClick = {
