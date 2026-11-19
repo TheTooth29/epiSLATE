@@ -235,8 +235,8 @@ private fun TrialActivationScreen(onExit: () -> Unit, onActivated: () -> Unit) {
     val exitFocus = remember { FocusRequester() }
     BackHandler(onBack = onExit)
     TrialFrame(if (activated) "Your trial is ready" else "Your invitation to try epiSLATE",
-        if (activated) "Your 72 hours has started. Enjoy exploring epiSLATE."
-        else "Enter your six-digit invitation code. Your 72-hour trial starts when you activate it.") {
+        if (activated) "Your 72 hours has started.  Enjoy exploring epiSLATE."
+        else "Enter your six-digit invitation code.  Your 72-hour trial starts when you activate it.") {
         if (activated) {
             Text("Enjoy your epiSLATE trial.", color = Color.White)
         } else {
@@ -255,9 +255,9 @@ private fun TrialActivationScreen(onExit: () -> Unit, onActivated: () -> Unit) {
                         RedemptionResult.INVALID_CODE -> "That invitation code is not valid."
                         RedemptionResult.REVOKED_CODE -> "This invitation code has been canceled."
                         RedemptionResult.ALREADY_STARTED -> "This installation has already started its trial."
-                        RedemptionResult.NETWORK_ERROR -> "Unable to connect. Check your internet connection and try again."
-                        RedemptionResult.RATE_LIMITED -> "Too many attempts. Please wait a minute and try again. If this continues, contact your trial administrator."
-                        RedemptionResult.STORAGE_ERROR -> "Unable to save activation. Please try again."
+                        RedemptionResult.NETWORK_ERROR -> "Unable to connect.  Check your internet connection and try again."
+                        RedemptionResult.RATE_LIMITED -> "Too many attempts.  Please wait a minute and try again.  If this continues, contact your trial administrator."
+                        RedemptionResult.STORAGE_ERROR -> "Unable to save activation.  Please try again."
                         else -> null
                     }
                     busy = false
@@ -273,10 +273,10 @@ private fun TrialActivationScreen(onExit: () -> Unit, onActivated: () -> Unit) {
 private fun TrialWelcomeScreen(onContinue: () -> Unit) {
     val focus = remember { FocusRequester() }
     BackHandler { }
-    TrialFrame("Your epiSLATE trial is active", "Your 72-hour trial has started. Enjoy exploring epiSLATE!") {
-        TrialContactLine("Questions during your trial? Email ")
-        // Match TrialFrame's 20dp gap between the two body lines.
-        Spacer(Modifier.height(20.dp))
+    TrialFrame("Your epiSLATE trial is active", "Your 72-hour trial has started.  Enjoy exploring epiSLATE!") {
+        TrialContactLine("Questions during your trial?  Email ")
+        // One extra body-text line (24sp) above the action, matching the exit page.
+        Spacer(Modifier.height(with(LocalDensity.current) { 24.sp.toDp() } + 20.dp))
         TrialButton(modifier = Modifier.focusRequester(focus), onClick = onContinue) { Text("Continue") }
     }
     LaunchedEffect(Unit) { focus.requestFocus() }
@@ -307,8 +307,8 @@ private fun TrialExitScreen(snapshot: TrialSnapshot, onStay: () -> Unit, onExit:
         else if (snapshot.status == TrialStatus.EXPIRED) "Your trial is complete."
         else "Connect to the internet to check your remaining trial time."
     TrialFrame("Enjoying your sneak peek?", time) {
-        TrialContactLine("Questions during your trial? Email ")
-        Spacer(Modifier.height(20.dp))
+        TrialContactLine("Questions during your trial?  Email ")
+        Spacer(Modifier.height(with(LocalDensity.current) { 24.sp.toDp() } + 20.dp))
         TrialButton(modifier = Modifier.focusRequester(stay).focusProperties {
             up = FocusRequester.Cancel; down = leave; left = FocusRequester.Cancel; right = FocusRequester.Cancel
         }, onClick = onStay) { Text("Return to epiSLATE") }
@@ -331,8 +331,8 @@ private fun TrialExitScreen(snapshot: TrialSnapshot, onStay: () -> Unit, onExit:
 @Composable
 fun TrialEndedScreen(onExit: () -> Unit = { }) {
     BackHandler(onBack = onExit)
-    TrialFrame("Your epiSLATE trial has ended", "Thanks for trying epiSLATE. Your 72-hour preview is complete.") {
-        TrialContactLine("Interested in an epiSLATE subscription? Email ")
+    TrialFrame("Your epiSLATE trial has ended", "Thanks for trying epiSLATE.  Your 72-hour preview is complete.") {
+        TrialContactLine("Interested in an epiSLATE subscription?  Email ")
         Spacer(Modifier.height(20.dp))
         TrialButton(onClick = onExit) { Text("Close") }
     }
@@ -345,7 +345,7 @@ private fun TrialPinScreen(onCancel: () -> Unit, onUnlocked: () -> Unit) {
     BackHandler(onBack = onCancel)
     TrialFrame("Settings is locked", "Enter the master PIN to open Settings.") {
         NumericEntry(pin, 4, "PIN", true) { pin = it; error = false }
-        if (error) Text("Incorrect PIN. Please try again.", color = Color(0xFFFFB4AB),
+        if (error) Text("Incorrect PIN.  Please try again.", color = Color(0xFFFFB4AB),
             fontSize = 17.sp, lineHeight = 24.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -360,7 +360,7 @@ private fun TrialPinScreen(onCancel: () -> Unit, onUnlocked: () -> Unit) {
 @Composable
 private fun TrialConnectionScreen(onExit: () -> Unit) {
     BackHandler(onBack = onExit)
-    TrialFrame("Connection required", "Connect to the internet to verify your trial. epiSLATE will retry automatically.") {
+    TrialFrame("Connection required", "Connect to the internet to verify your trial.  epiSLATE will retry automatically.") {
         TrialButton(onClick = onExit) { Text("Exit") }
     }
 }

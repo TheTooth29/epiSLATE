@@ -36,7 +36,9 @@ class TrialPreset @Inject constructor(
     private val collections: CollectionsDataStore,
     private val addons: AddonRepository,
     private val tmdbSettings: TmdbSettingsDataStore,
-    private val streamBadges: StreamBadgeSettingsDataStore
+    private val streamBadges: StreamBadgeSettingsDataStore,
+    private val addonPreferences: AddonPreferences,
+    private val liveTvPreferences: com.nuvio.tv.livetv.data.LiveTvPreferences
 ) {
     suspend fun prepare() = withContext(Dispatchers.IO) {
         if (!BuildConfig.TRIAL_ENABLED) return@withContext
@@ -66,7 +68,19 @@ class TrialPreset @Inject constructor(
             layout.setFocusedPosterBackdropExpandEnabled(false)
             check(marker.edit().putBoolean("browsing_defaults_v1_applied", true).commit())
         }
-        if (marker.getBoolean("v1_applied", false)) return@withContext
+        if (!marker.getBoolean("sidebar_defaults_v1_applied", false)) {
+            liveTvPreferences.updateSettings { it.copy(showInSidebar = false) }
+            liveTvPreferences.editSportsSettings { raw ->
+                // Change only this preference; preserve all other stored Sports values.
+                (if (raw.isNullOrBlank()) JSONObject() else JSONObject(raw))
+                    .put("showInSidebar", false).toString()
+            }
+            check(marker.edit().putBoolean("sidebar_defaults_v1_applied", true).commit())
+        }
+        if (marker.getBoolean("v1_applied", false)) {
+            applyAddonDisplayName(marker)
+            return@withContext
+        }
         val preset = context.assets.open("trial-preset.json").bufferedReader().use { JSONObject(it.readText()) }
         val urls = preset.getJSONArray("addonUrls")
         for (i in 0 until urls.length()) {
@@ -93,6 +107,18 @@ class TrialPreset @Inject constructor(
         experience.setAddonSetupSkipped(true)
         onboarding.setHasSeenAuthQrOnFirstLaunch(true)
         check(marker.edit().putBoolean("v1_applied", true).commit())
+        applyAddonDisplayName(marker)
+    }
+
+    private suspend fun applyAddonDisplayName(marker: android.content.SharedPreferences) {
+        if (marker.getBoolean("addon_name_1080p_v1_applied", false)) return
+        val urls = addonPreferences.installedAddonUrlsForProfile(1).filter { url ->
+            runCatching { java.net.URI(url).host?.contains("aiostreams", ignoreCase = true) == true }
+                .getOrDefault(false)
+        }
+        if (urls.isEmpty()) return // Retry once setup has installed the Trial addon.
+        urls.forEach { addonPreferences.setUserSetName(it, "1080p", profileId = 1) }
+        check(marker.edit().putBoolean("addon_name_1080p_v1_applied", true).commit())
     }
 }
 
@@ -111,7 +137,7 @@ fun TrialPresetGate(preset: TrialPreset, content: @Composable () -> Unit) {
     }
     if (ready) content() else Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center) {
-        Text(if (failed) "Unable to load the trial setup. Check your internet connection." else "Preparing your epiSLATE trial…")
+        Text(if (failed) "Unable to load the trial setup.  Check your internet connection." else "Preparing your epiSLATE trial…")
         if (failed) { Spacer(Modifier.height(20.dp)); Button(onClick = { attempt++ }) { Text("Retry") } }
     }
 }

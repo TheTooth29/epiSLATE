@@ -213,6 +213,17 @@ class AddonPreferences @Inject constructor(
         }
     }
 
+    suspend fun installedAddonUrlsForProfile(profileId: Int): List<String> =
+        getCurrentList(store(profileId).data.first())
+
+    suspend fun setUserSetName(url: String, name: String, profileId: Int) {
+        store(profileId).edit { preferences ->
+            val names = preferences[userSetNamesKey]?.let(::parseNameMap).orEmpty().toMutableMap()
+            names[canonicalizeUrl(url)] = name
+            preferences[userSetNamesKey] = gson.toJson(names)
+        }
+    }
+
     private fun parseNameMap(json: String): Map<String, String> {
         return try {
             val type = object : TypeToken<Map<String, String>>() {}.type
