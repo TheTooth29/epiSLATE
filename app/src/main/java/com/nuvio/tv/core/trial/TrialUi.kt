@@ -270,9 +270,25 @@ private fun TrialWelcomeScreen(onContinue: () -> Unit) {
     val focus = remember { FocusRequester() }
     BackHandler { }
     TrialFrame("Your epiSLATE trial is active", "Your 72-hour trial has started. Enjoy exploring epiSLATE!") {
+        TrialContactLine("Questions during your trial? Email ")
+        Spacer(Modifier.height(12.dp))
         TrialButton(modifier = Modifier.focusRequester(focus), onClick = onContinue) { Text("Continue") }
     }
     LaunchedEffect(Unit) { focus.requestFocus() }
+}
+
+@Composable
+private fun TrialContactLine(prompt: String) {
+    val text = androidx.compose.ui.text.buildAnnotatedString {
+        append(prompt)
+        pushStyle(androidx.compose.ui.text.SpanStyle(color = Color(0xFF8AB8ED)))
+        append("epiSL8@gmail.com")
+        pop()
+        append(".")
+    }
+    Text(text = text, color = Color(0xFFCFD8E3), fontSize = 17.sp, lineHeight = 24.sp,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        modifier = Modifier.widthIn(max = 620.dp).fillMaxWidth())
 }
 
 @Composable
@@ -314,6 +330,8 @@ private fun TrialExitScreen(snapshot: TrialSnapshot, onStay: () -> Unit, onExit:
 fun TrialEndedScreen(onExit: () -> Unit = { }) {
     BackHandler(onBack = onExit)
     TrialFrame("Your trial has ended", "Thanks for trying epiSLATE. Your 72-hour preview is complete.") {
+        TrialContactLine("Interested in an epiSLATE subscription? Email ")
+        Spacer(Modifier.height(12.dp))
         TrialButton(onClick = onExit) { Text("Close") }
     }
 }
