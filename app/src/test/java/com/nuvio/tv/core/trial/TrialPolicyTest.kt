@@ -4,6 +4,11 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class TrialPolicyTest {
+    @Test fun numberedStreamLabelsPreserveCacheIndicatorsAndHideProviderNames() {
+        assertEquals("⚡ epiSLATE | 1", TrialStreamLabel.format("⚡ TB | TORRENTIO", 1))
+        assertEquals("☠ epiSLATE | 2", TrialStreamLabel.format("☠ epiSLATE | ", 2))
+        assertEquals("epiSLATE | 12", TrialStreamLabel.format("Comet", 12))
+    }
     @Test fun trialEndsAtExactly72Hours() {
         val start = 1_000_000L
         val end = start + TrialPolicy.DURATION_MS

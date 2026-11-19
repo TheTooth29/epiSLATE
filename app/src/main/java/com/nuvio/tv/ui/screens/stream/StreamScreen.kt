@@ -113,6 +113,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
+import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.core.trial.TrialStreamLabel
 import android.util.Log
 import dev.chrisbanes.haze.HazeInputScale
 import dev.chrisbanes.haze.HazeState
@@ -1300,6 +1302,7 @@ private fun StreamsList(
                 val isPartySource = partySource?.matches(stream) == true
                 StreamCard(
                     stream = stream,
+                    trialStreamNumber = (index + 1).takeIf { BuildConfig.TRIAL_ENABLED },
                     showFileSizeBadges = showFileSizeBadges,
                     showAddonLogo = showAddonLogo,
                     badgePlacement = badgePlacement,
@@ -1343,12 +1346,16 @@ private fun StreamCard(
     onFocusChanged: ((Boolean) -> Unit)? = null,
     onUpKey: (() -> Unit)? = null,
     outlined: Boolean = false,
-    label: String? = null
+    label: String? = null,
+    trialStreamNumber: Int? = null
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val unknownStreamLabel = stringResource(R.string.stream_unknown)
-    val streamName = remember(stream, unknownStreamLabel) { stream.getDisplayNameOrNull() ?: unknownStreamLabel }
+    val streamName = remember(stream, unknownStreamLabel, trialStreamNumber) {
+        val original = stream.getDisplayNameOrNull() ?: unknownStreamLabel
+        trialStreamNumber?.let { TrialStreamLabel.format(original, it) } ?: original
+    }
     val streamDescription = remember(stream) { stream.getDisplayDescription() }
     val hasBadges = stream.badges.isNotEmpty() || (showFileSizeBadges && stream.behaviorHints?.videoSize != null) || reserveBadgeSpace
     val cardShape = RoundedCornerShape(NuvioTheme.radii.md)

@@ -113,7 +113,7 @@ fun TrialPresetGate(preset: TrialPreset, content: @Composable () -> Unit) {
 
 object TrialContentPolicy {
     const val DISCOVER = "collection-bc-9d385ff48f9d4204-2"
-    private val locked = setOf("b466d553-3d52-4957-8f81-571aeb9cc295", "folder-bc-32ca7bd381b2", "folder-b790c003")
+    private val locked = setOf("folder-bc-734b38fd11b8", "b466d553-3d52-4957-8f81-571aeb9cc295", "folder-bc-32ca7bd381b2", "folder-b790c003")
     fun locked(collectionId: String, folderId: String) = BuildConfig.TRIAL_ENABLED && collectionId == DISCOVER && folderId in locked
 }
 
