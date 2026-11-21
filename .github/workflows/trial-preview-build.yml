@@ -130,10 +130,13 @@ jobs:
       - name: Test trial policy and merged sign-out behavior
         run: |
           chmod +x gradlew
-          ./gradlew :app:testFullDebugUnitTest --stacktrace --console=plain -PepislateTrial=true -PepislateTrialBuildNumber=${{ github.run_number }} -PlivetvTestBuild=false -PlivetvBuildNumber=15 --tests 'com.nuvio.tv.core.trial.*' --tests 'com.nuvio.tv.core.auth.AccountLocalDataResetServiceTest' -Dorg.gradle.workers.max=2
+          ./gradlew :app:testFullDebugUnitTest --stacktrace --console=plain -PepislateTrial=true -PepislateTrialBuildNumber=${{ github.run_number }} -PlivetvTestBuild=false -PlivetvBuildNumber=16 --tests 'com.nuvio.tv.core.trial.*' --tests 'com.nuvio.tv.core.auth.AccountLocalDataResetServiceTest' -Dorg.gradle.workers.max=2
+
+      - name: Check store flavor update isolation
+        run: ./gradlew :app:compilePlaystoreDebugKotlin --stacktrace --console=plain -PepislateTrial=true -PepislateTrialBuildNumber=${{ github.run_number }} -PlivetvTestBuild=false -PlivetvBuildNumber=16 -Dorg.gradle.workers.max=2
 
       - name: Build signed trial APK
-        run: ./gradlew :app:assembleFullRelease --stacktrace --console=plain -PepislateTrial=true -PepislateTrialBuildNumber=${{ github.run_number }} -PlivetvTestBuild=false -PlivetvBuildNumber=15 -Dorg.gradle.workers.max=2
+        run: ./gradlew :app:assembleFullRelease --stacktrace --console=plain -PepislateTrial=true -PepislateTrialBuildNumber=${{ github.run_number }} -PlivetvTestBuild=false -PlivetvBuildNumber=16 -Dorg.gradle.workers.max=2
 
       - name: Verify and collect the universal trial APK
         run: |
