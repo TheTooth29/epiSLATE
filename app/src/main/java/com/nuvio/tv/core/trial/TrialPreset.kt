@@ -38,7 +38,8 @@ class TrialPreset @Inject constructor(
     private val tmdbSettings: TmdbSettingsDataStore,
     private val streamBadges: StreamBadgeSettingsDataStore,
     private val addonPreferences: AddonPreferences,
-    private val liveTvPreferences: com.nuvio.tv.livetv.data.LiveTvPreferences
+    private val liveTvPreferences: com.nuvio.tv.livetv.data.LiveTvPreferences,
+    private val trailerSettings: TrailerSettingsDataStore
 ) {
     suspend fun prepare() = withContext(Dispatchers.IO) {
         if (!BuildConfig.TRIAL_ENABLED) return@withContext
@@ -67,6 +68,10 @@ class TrialPreset @Inject constructor(
             layout.setCatalogTypeSuffixEnabled(false)
             layout.setFocusedPosterBackdropExpandEnabled(false)
             check(marker.edit().putBoolean("browsing_defaults_v1_applied", true).commit())
+        }
+        if (!marker.getBoolean("auto_trailer_off_v1_applied", false)) {
+            trailerSettings.setEnabled(false, profileId = 1)
+            check(marker.edit().putBoolean("auto_trailer_off_v1_applied", true).commit())
         }
         if (!marker.getBoolean("sidebar_defaults_v1_applied", false)) {
             liveTvPreferences.updateSettings { it.copy(showInSidebar = false) }

@@ -46,8 +46,8 @@ class TrailerSettingsDataStore @Inject constructor(
         }
     }
 
-    suspend fun setEnabled(enabled: Boolean) {
-        store().edit { it[enabledKey] = enabled }
+    suspend fun setEnabled(enabled: Boolean, profileId: Int = profileManager.activeProfileId.value) {
+        store(profileId).edit { it[enabledKey] = enabled }
     }
 
     suspend fun setDelaySeconds(seconds: Int) {

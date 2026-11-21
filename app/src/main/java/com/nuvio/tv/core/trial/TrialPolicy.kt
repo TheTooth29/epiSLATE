@@ -2,10 +2,13 @@ package com.nuvio.tv.core.trial
 
 /** Local preview policy. This does not claim server-backed or reinstall-proof licensing. */
 object TrialPolicy {
-    const val DURATION_MS = 72L * 60 * 60 * 1000
+    const val DURATION_MS = 7L * 24 * 60 * 60 * 1000
+    const val LEGACY_DURATION_MS = 72L * 60 * 60 * 1000
     fun isCodeFormatValid(code: String): Boolean = code.length == 6 && code.all { it in '0'..'9' }
     fun validRecord(start: Long, end: Long): Boolean =
-        start > 0 && start <= Long.MAX_VALUE - DURATION_MS && end == start + DURATION_MS
+        start > 0 && listOf(DURATION_MS, LEGACY_DURATION_MS).any { duration ->
+            start <= Long.MAX_VALUE - duration && end == start + duration
+        }
 
     fun effectiveTime(wall: Long, previous: Long, anchor: Long, elapsed: Long, anchorElapsed: Long, sameBoot: Boolean): Long {
         val delta = if (sameBoot && elapsed >= anchorElapsed) elapsed - anchorElapsed else 0L

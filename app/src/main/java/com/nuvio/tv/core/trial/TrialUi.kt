@@ -235,8 +235,8 @@ private fun TrialActivationScreen(onExit: () -> Unit, onActivated: () -> Unit) {
     val exitFocus = remember { FocusRequester() }
     BackHandler(onBack = onExit)
     TrialFrame(if (activated) "Your trial is ready" else "Your invitation to try epiSLATE",
-        if (activated) "Your 72 hours has started.  Enjoy exploring epiSLATE."
-        else "Enter your six-digit invitation code.  Your 72-hour trial starts when you activate it.") {
+        if (activated) "Your trial has started.  Enjoy exploring epiSLATE."
+        else "Enter your six-digit invitation code.  Your 7-day trial starts when you activate it.") {
         if (activated) {
             Text("Enjoy your epiSLATE trial.", color = Color.White)
         } else {
@@ -244,7 +244,7 @@ private fun TrialActivationScreen(onExit: () -> Unit, onActivated: () -> Unit) {
             error?.let { Text(it, color = Color(0xFFFFB4AB), fontSize = 17.sp, lineHeight = 24.sp,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 modifier = Modifier.widthIn(max = 620.dp)) }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(with(LocalDensity.current) { 24.sp.toDp() } + 16.dp))
             TrialButton(modifier = Modifier.focusRequester(activateFocus).focusProperties { down = exitFocus }, enabled = code.length == 6 && !busy, onClick = {
                 busy = true
                 scope.launch {
@@ -262,7 +262,7 @@ private fun TrialActivationScreen(onExit: () -> Unit, onActivated: () -> Unit) {
                     }
                     busy = false
                 }
-            }) { Text(if (busy) "Activating…" else "Activate 72-hour trial") }
+            }) { Text(if (busy) "Activating…" else "Activate 7-day trial") }
         }
         Spacer(Modifier.height(12.dp))
         TrialButton(modifier = Modifier.focusRequester(exitFocus).focusProperties { if (code.length == 6 && !busy && !activated) up = activateFocus }, enabled = !busy, onClick = onExit) { Text("Exit") }
@@ -273,7 +273,7 @@ private fun TrialActivationScreen(onExit: () -> Unit, onActivated: () -> Unit) {
 private fun TrialWelcomeScreen(onContinue: () -> Unit) {
     val focus = remember { FocusRequester() }
     BackHandler { }
-    TrialFrame("Your epiSLATE trial is active", "Your 72-hour trial has started.  Enjoy exploring epiSLATE!") {
+    TrialFrame("Your epiSLATE trial is active", "Your trial has started.  Enjoy exploring epiSLATE!") {
         TrialContactLine("Questions during your trial?  Email ")
         // One extra body-text line (24sp) above the action, matching the exit page.
         Spacer(Modifier.height(with(LocalDensity.current) { 24.sp.toDp() } + 20.dp))
@@ -331,7 +331,7 @@ private fun TrialExitScreen(snapshot: TrialSnapshot, onStay: () -> Unit, onExit:
 @Composable
 fun TrialEndedScreen(onExit: () -> Unit = { }) {
     BackHandler(onBack = onExit)
-    TrialFrame("Your epiSLATE trial has ended", "Thanks for trying epiSLATE.  Your 72-hour preview is complete.") {
+    TrialFrame("Your epiSLATE trial has ended", "Thanks for trying epiSLATE.  Your trial preview is complete.") {
         TrialContactLine("Interested in an epiSLATE subscription?  Email ")
         Spacer(Modifier.height(20.dp))
         TrialButton(onClick = onExit) { Text("Close") }

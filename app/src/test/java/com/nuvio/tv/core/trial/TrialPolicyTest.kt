@@ -9,13 +9,22 @@ class TrialPolicyTest {
         assertEquals("☠ epiSLATE | 2", TrialStreamLabel.format("☠ epiSLATE | ", 2))
         assertEquals("epiSLATE | 12", TrialStreamLabel.format("Comet", 12))
     }
-    @Test fun trialEndsAtExactly72Hours() {
+    @Test fun trialEndsAtExactlySevenDays() {
         val start = 1_000_000L
         val end = start + TrialPolicy.DURATION_MS
-        assertEquals(72L * 60 * 60 * 1000, TrialPolicy.remaining(start, end, start))
+        assertEquals(7L * 24 * 60 * 60 * 1000, TrialPolicy.remaining(start, end, start))
         assertEquals(1L, TrialPolicy.remaining(start, end, end - 1))
         assertEquals(0L, TrialPolicy.remaining(start, end, end))
         assertEquals(0L, TrialPolicy.remaining(start, end, end + 1))
+    }
+    @Test fun legacyTrialsKeepTheirOriginalDeadline() {
+        val start = 100L
+        val end = start + TrialPolicy.LEGACY_DURATION_MS
+        assertTrue(TrialPolicy.validRecord(start, end))
+        assertEquals(TrialPolicy.LEGACY_DURATION_MS, TrialPolicy.remaining(start, end, start))
+        assertEquals(0L, TrialPolicy.remaining(start, end, end))
+        assertFalse(TrialPolicy.validRecord(start, end + 1))
+        assertFalse(TrialPolicy.validRecord(start, start + 4L * 24 * 60 * 60 * 1000))
     }
     @Test fun partialOrExtendedRecordsNeverUnlock() {
         assertFalse(TrialPolicy.validRecord(0, TrialPolicy.DURATION_MS))

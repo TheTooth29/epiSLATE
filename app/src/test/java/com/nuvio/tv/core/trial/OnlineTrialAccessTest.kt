@@ -13,6 +13,7 @@ class OnlineTrialAccessTest {
     private var available = true
     private var status = "active"
     private val start = 1_000_000L
+    private var duration = TrialPolicy.DURATION_MS
     private val context = mockk<Context>()
     private val prefs = mockk<SharedPreferences>()
     init {
@@ -26,7 +27,7 @@ class OnlineTrialAccessTest {
     private fun access() = OnlineTrialAccess(context, { elapsed }) { _, _ ->
         if (!available) throw java.io.IOException()
         JSONObject().put("activated_at", start / 1000)
-            .put("expires_at", (start + TrialPolicy.DURATION_MS) / 1000)
+            .put("expires_at", (start + duration) / 1000)
             .put("server_time", start / 1000).put("status", status)
     }
     @Test fun startsOnlyAfterOnlineRedemptionAndRequiresRevalidationAfterRestart() {
@@ -37,6 +38,14 @@ class OnlineTrialAccessTest {
         elapsed += 10_000
         assertEquals(TrialPolicy.DURATION_MS - 10_000, access.snapshot().remainingMs)
         assertEquals(TrialStatus.CONNECTION_REQUIRED, access().snapshot().status)
+    }
+    @Test fun legacyServerDeadlineIsNotExtendedOnUpgrade() {
+        duration = TrialPolicy.LEGACY_DURATION_MS
+        val access = access()
+        assertEquals(RedemptionResult.ACTIVATED, access.redeem("123456"))
+        assertEquals(start + duration, access.snapshot().expiresAt)
+        elapsed += 10_000
+        assertEquals(duration - 10_000, access.snapshot().remainingMs)
     }
     @Test fun unavailableNetworkBlocksNewSessionsWithoutReportingExpiration() {
         val access = access(); access.redeem("123456")
