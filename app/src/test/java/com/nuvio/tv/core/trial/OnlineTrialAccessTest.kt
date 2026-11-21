@@ -14,6 +14,7 @@ class OnlineTrialAccessTest {
     private var status = "active"
     private val start = 1_000_000L
     private var duration = TrialPolicy.DURATION_MS
+    private var serverNow = start
     private val context = mockk<Context>()
     private val prefs = mockk<SharedPreferences>()
     init {
@@ -28,7 +29,7 @@ class OnlineTrialAccessTest {
         if (!available) throw java.io.IOException()
         JSONObject().put("activated_at", start / 1000)
             .put("expires_at", (start + duration) / 1000)
-            .put("server_time", start / 1000).put("status", status)
+            .put("server_time", serverNow / 1000).put("status", status)
     }
     @Test fun startsOnlyAfterOnlineRedemptionAndRequiresRevalidationAfterRestart() {
         val access = access()
@@ -46,6 +47,26 @@ class OnlineTrialAccessTest {
         assertEquals(start + duration, access.snapshot().expiresAt)
         elapsed += 10_000
         assertEquals(duration - 10_000, access.snapshot().remainingMs)
+    }
+    @Test fun authenticatedExtensionRecoversExpiredTrialAndAfterRestart() {
+        duration = TrialPolicy.LEGACY_DURATION_MS
+        val oldSession = access()
+        assertEquals(RedemptionResult.ACTIVATED, oldSession.redeem("123456"))
+        serverNow = start + duration
+        elapsed += 51_000
+        oldSession.refresh()
+        assertEquals(TrialStatus.EXPIRED, oldSession.snapshot().status)
+        duration = TrialPolicy.DURATION_MS
+        elapsed += 51_000
+        oldSession.refresh()
+        assertEquals(TrialStatus.ACTIVE, oldSession.snapshot().status)
+        assertEquals(start + duration, oldSession.snapshot().expiresAt)
+        val updatedSession = access()
+        assertEquals(TrialStatus.CONNECTION_REQUIRED, updatedSession.snapshot().status)
+        updatedSession.refresh()
+        assertEquals(TrialStatus.ACTIVE, updatedSession.snapshot().status)
+        assertEquals(start + duration, updatedSession.snapshot().expiresAt)
+        assertTrue(redeemed)
     }
     @Test fun unavailableNetworkBlocksNewSessionsWithoutReportingExpiration() {
         val access = access(); access.redeem("123456")
