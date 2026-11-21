@@ -1,6 +1,6 @@
 # epiSLATE — Unreleased
 
-Based on regular Beta 4. These changes are being prepared for a Test APK; they are not a published regular release.
+Based on regular Beta 4. These changes passed the owner’s Test APK device sequence; they are not a published regular release.
 
 ## Collection browsing
 
@@ -25,7 +25,10 @@ Based on regular Beta 4. These changes are being prepared for a Test APK; they a
 
 - Original-renderer integrity and personal customization checks passed.
 - Full Debug app/test compilation and 37 focused automated tests passed with no failures, errors or skipped tests. Coverage includes layout defaults/geometry, heading entry/cancellation, catalog return focus, watched-episode display filtering and existing episode-airing rules.
-- TV verification is pending for the full-version port: collection navigation/reentry, playback versus browsing return focus, stream numbering and completed-episode removal without restarting.
+- Owner TV verification passed on Test 107117 (21 November 2026): Two full rows, heading/poster navigation, collection reentry, outlines/date clearance, browsing versus playback return focus, stream numbers with original labels/logos/badges, sidebar/home branding, and selecting Original then returning to Two full rows.
+- Most importantly, the owner confirmed a completed episode disappeared from Continue Watching **without restarting**. Home → SmartTube audio and paused playback return/resume also passed; watched checkmarks appeared after sign-in/sync on the fresh Test install.
+- Exact tested source: `a40290708626526833d575e332e5e7de06580e0e`; [successful Test build](https://github.com/TheTooth29/epiSLATE/actions/runs/44888590572). Signed packaging, Test identity and artifact checks passed.
+- Unreported slow-loading catalog cases and preservation of previously saved default switches were not newly device-verified. A regular-package upgrade remains a separate release check; this was a fresh Test-package installation.
 
 ## Scope
 
