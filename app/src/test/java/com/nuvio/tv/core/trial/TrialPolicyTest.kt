@@ -4,6 +4,20 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class TrialPolicyTest {
+    @Test fun trialUpdaterAcceptsOnlyApprovedNewerTrialArtifacts() {
+        fun eligible(installed: String = TrialUpdatePolicy.PACKAGE, candidate: String = TrialUpdatePolicy.PACKAGE,
+            version: Long = 107117, approved: Boolean = true, url: String = TrialUpdatePolicy.APK_URL,
+            hash: String = "a".repeat(64)) = TrialUpdatePolicy.eligible(installed, 107116, candidate, version, approved, url, hash)
+        assertTrue(eligible())
+        assertFalse(eligible(installed = "com.nuvio.livetv"))
+        assertFalse(eligible(candidate = "com.nuvio.livetv"))
+        assertFalse(eligible(version = 107116))
+        assertFalse(eligible(version = 107115))
+        assertFalse(eligible(approved = false))
+        assertFalse(eligible(url = TrialUpdatePolicy.APK_URL.replace("trial-download", "beta-download")))
+        assertFalse(eligible(hash = ""))
+    }
+
     @Test fun numberedStreamLabelsPreserveCacheIndicatorsAndHideProviderNames() {
         assertEquals("⚡ epiSLATE | 1", TrialStreamLabel.format("⚡ TB | TORRENTIO", 1))
         assertEquals("☠ epiSLATE | 2", TrialStreamLabel.format("☠ epiSLATE | ", 2))

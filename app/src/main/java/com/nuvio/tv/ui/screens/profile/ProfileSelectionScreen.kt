@@ -209,6 +209,9 @@ fun ProfileSelectionScreen(
     onBackPress: (() -> Unit)? = null,
     viewModel: ProfileSelectionViewModel = hiltViewModel()
 ) {
+    if (screenMode == ProfileSelectionMode.Selection) {
+        com.nuvio.tv.updater.ui.TrialProfileUpdatePrompt()
+    }
     val context = LocalContext.current
     val profiles by viewModel.profiles.collectAsState()
     val activeProfileId by viewModel.activeProfileId.collectAsState()
