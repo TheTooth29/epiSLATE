@@ -1,0 +1,18 @@
+# Test-only official account password login experiment
+
+Owner authorized an isolated experiment with an existing Nuvio-hosted email/password account. Not released or proven server-compatible, and not a statement of commercial hosted-service permission.
+
+Branch: work/test-email-password-login, based on owner-tested Beta4 adoption source26f3959. Planned Test107118, version1.0.0-beta.4, packagecom.nuvio.livetv.test. No merge, regular/Trial release, backend or Downloader changes.
+
+QR remains the default. Signed-out official-server Test installs can select **Use email and password**, using the existing password-token endpoint and normal session import/profile/addon/history sync. **Use QR code instead** cancels QR polling state/clears errors and restores QR availability. No server URL/key/capability overrides, signup, customer provisioning or auth bypass. Exact package gate excludes regular, Trial and store packages; custom-server behavior remains as before. Password UI state stays in memory rather than saved instance state.
+
+Owner enters credentials privately on TV. Never ask for or record the password, copy tokens, or include credential screenshots/logs. Existing transport diagnostics redact credential fields; request payload content is not newly logged. Only normal existing server authentication is used.
+
+Device checks, one at a time after CI:
+1. Update existing Test in place107117->107118 and confirm existing session/history remain.
+2. To test login, use a spare signed-out Test install if available. Otherwise deliberately sign out **Test only** after explaining that sign-out clears local account state. Do not sign out regular epiSLATE or clear its data.
+3. Confirm QR still appears, switch to email/password, type privately, and submit once. Report success or visible error without password/token.
+4. If accepted, verify normal profiles, addons, watched checkmarks and Continue Watching sync, then restart and confirm session persists.
+5. If rejected, return to QR and verify normal sign-in remains possible. Do not repeatedly retry invalid credentials.
+
+Automated isolation policy tests cover official Test only, regular/Trial/store/lookalike exclusion, and custom-server exclusion. Full UI/VM compilation and existing auth/regression checks run in signed Test CI. Server acceptance and TV focus/keyboard behavior remain pending device testing.

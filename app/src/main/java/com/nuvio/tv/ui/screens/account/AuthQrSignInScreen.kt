@@ -85,7 +85,9 @@ fun AuthQrSignInScreen(
     val fullAccount = uiState.authState as? AuthState.FullAccount
     val isSignedIn = fullAccount != null
     val isOnboardingMode = onContinue != null
-    val useEmailLogin = viewModel.usesEmailPasswordLogin
+    var testEmailLogin by rememberSaveable { mutableStateOf(false) }
+    val canSwitchLogin = viewModel.offersTestEmailPasswordLogin
+    val useEmailLogin = viewModel.usesEmailPasswordLogin || (canSwitchLogin && testEmailLogin)
     val useQrLogin = !useEmailLogin
     val isApproved = remember(uiState.qrLoginStatus) {
         uiState.qrLoginStatus?.contains("approved", ignoreCase = true) == true
@@ -124,7 +126,7 @@ fun AuthQrSignInScreen(
         }
     }
 
-    LaunchedEffect(uiState.authState, isSignedIn, uiState.qrLoginCode, uiState.isLoading, uiState.error, exitRequested) {
+    LaunchedEffect(useQrLogin, uiState.authState, isSignedIn, uiState.qrLoginCode, uiState.isLoading, uiState.error, exitRequested) {
         if (
             useQrLogin &&
             !exitRequested &&
@@ -204,6 +206,10 @@ fun AuthQrSignInScreen(
                 isSignedIn = isSignedIn,
                 isOnboardingMode = isOnboardingMode,
                 useEmailLogin = useEmailLogin,
+                onSwitchLogin = if (canSwitchLogin && !isSignedIn) ({
+                    viewModel.switchTestLoginMethod()
+                    testEmailLogin = !testEmailLogin
+                }) else null,
                 remainingMillis = remainingMillis,
                 onSignIn = viewModel::signIn,
                 onRefreshOrSignOut = {
@@ -234,7 +240,7 @@ fun AuthQrSignInScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(useEmailLogin) {
         loginFocusRequester.requestFocusAfterFrames(frames = 3)
     }
 
@@ -326,6 +332,7 @@ private fun AuthQrLoginPane(
     isSignedIn: Boolean,
     isOnboardingMode: Boolean,
     useEmailLogin: Boolean,
+    onSwitchLogin: (() -> Unit)?,
     remainingMillis: Long,
     onSignIn: (String, String) -> Unit,
     onRefreshOrSignOut: () -> Unit,
@@ -377,6 +384,21 @@ private fun AuthQrLoginPane(
             AuthQrCodeBlock(uiState = uiState, remainingMillis = remainingMillis)
         }
 
+        if (onSwitchLogin != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onSwitchLogin,
+                enabled = !uiState.isLoading,
+                colors = ButtonDefaults.colors(
+                    containerColor = AuthSecondaryButtonBackground,
+                    focusedContainerColor = Color.White,
+                    contentColor = AuthTextPrimary,
+                    focusedContentColor = Color.Black
+                )
+            ) {
+                Text(if (useEmailLogin) "Use QR code instead" else "Use email and password")
+            }
+        }
         Spacer(modifier = Modifier.height(28.dp))
         Row(
             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
@@ -449,7 +471,7 @@ private fun AuthEmailLoginForm(
     initialFocusRequester: FocusRequester
 ) {
     var email by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     val canSignIn = email.isNotBlank() && password.isNotBlank() && !uiState.isLoading
     val submit = {
         if (canSignIn) {
