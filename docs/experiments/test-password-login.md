@@ -22,3 +22,7 @@ Device checks, one at a time after CI:
 5. If rejected, return to QR and verify normal sign-in remains possible. Do not repeatedly retry invalid credentials.
 
 Automated isolation policy tests cover official Test only, regular/Trial/store/lookalike exclusion, and custom-server exclusion. Full UI/VM compilation and existing auth/regression checks run in signed Test CI. Server acceptance and TV focus/keyboard behavior remain pending device testing.
+
+
+## Approved Trial-style controls revision, Test107120
+Owner rejected107119visuals and approved the revised preview before explicitly requesting build. Uses actual Trial activation Material3OutlinedTextField (320dp, default outlined shape and dark scheme primary#8AB8ED), solid#101923background,26spheading/17sp24spbody,12dpheadinggap/20dpbodygap and44dpfield-to-actionclearance. Sign-in button matches Trial idle/focus/pressed/disabled palette; standard visibility icon is inside password field. Profile wordmark component/insets unchanged. No Trial runtime, licensing, backend or preset code is adopted. Preserve107119source4ed5011 as visual revert point. Local source/customization/hash checks pass; full Compose build and new TV approval pending. Preview is a layout rendering, not a native APK screenshot.
