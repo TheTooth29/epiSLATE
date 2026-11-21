@@ -144,10 +144,10 @@ jobs:
           done
 
       - name: Test updater, series badges and beta regressions
-        run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' --tests 'com.nuvio.tv.core.auth.AccountLocalDataResetServiceTest' --tests 'com.nuvio.tv.core.auth.TestPasswordLoginPolicyTest' --tests 'com.nuvio.tv.core.tracking.NuvioWatchedEpisodeProjectionTest' --tests 'com.nuvio.tv.data.repository.WatchProgressRepositoryProfileIsolationTest' --tests 'com.nuvio.tv.ui.screens.home.SeriesBadgeRefreshTest' --tests 'com.nuvio.tv.ui.screens.home.HomeEnrichmentRetryTest' --tests 'com.nuvio.tv.ui.screens.home.ContinueWatchingAiringRulesTest' --tests 'com.nuvio.tv.ui.screens.home.HomeRowVisibilityTest' --tests 'com.nuvio.tv.domain.model.CollectionOrderingTest' --tests 'com.nuvio.tv.core.image.CollectionCoverPreviewTest' --tests 'com.nuvio.tv.ui.screens.collection.GridReleaseDateTest' --tests 'com.nuvio.tv.ui.screens.collection.TabbedGridPreviewTest' --tests 'com.nuvio.tv.ui.screens.collection.CatalogGridEntryPolicyTest' --tests 'com.nuvio.tv.ui.screens.home.CatalogReturnPolicyTest' --tests 'com.nuvio.tv.ui.screens.home.ContinueWatchingCompletionTest' --tests 'com.nuvio.tv.domain.model.HomeDimmingSettingsTest' --tests 'com.nuvio.tv.ui.screens.player.AppBackgroundStopTest' --tests 'com.nuvio.tv.ui.screens.player.PlayerStartupPlaybackPolicyTest' --tests 'com.nuvio.tv.ui.screens.player.PlayerFirstFrameCodecRecoveryPolicyTest' --tests 'com.nuvio.tv.ui.screens.player.PlayerAudioFallbackPolicyTest' --stacktrace -PlivetvTestBuild=true -PlivetvBuildNumber=18 -PlivetvVersionName=1.0.0-beta.4
+        run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' --tests 'com.nuvio.tv.core.auth.AccountLocalDataResetServiceTest' --tests 'com.nuvio.tv.core.auth.TestPasswordLoginPolicyTest' --tests 'com.nuvio.tv.core.tracking.NuvioWatchedEpisodeProjectionTest' --tests 'com.nuvio.tv.data.repository.WatchProgressRepositoryProfileIsolationTest' --tests 'com.nuvio.tv.ui.screens.home.SeriesBadgeRefreshTest' --tests 'com.nuvio.tv.ui.screens.home.HomeEnrichmentRetryTest' --tests 'com.nuvio.tv.ui.screens.home.ContinueWatchingAiringRulesTest' --tests 'com.nuvio.tv.ui.screens.home.HomeRowVisibilityTest' --tests 'com.nuvio.tv.domain.model.CollectionOrderingTest' --tests 'com.nuvio.tv.core.image.CollectionCoverPreviewTest' --tests 'com.nuvio.tv.ui.screens.collection.GridReleaseDateTest' --tests 'com.nuvio.tv.ui.screens.collection.TabbedGridPreviewTest' --tests 'com.nuvio.tv.ui.screens.collection.CatalogGridEntryPolicyTest' --tests 'com.nuvio.tv.ui.screens.home.CatalogReturnPolicyTest' --tests 'com.nuvio.tv.ui.screens.home.ContinueWatchingCompletionTest' --tests 'com.nuvio.tv.domain.model.HomeDimmingSettingsTest' --tests 'com.nuvio.tv.ui.screens.player.AppBackgroundStopTest' --tests 'com.nuvio.tv.ui.screens.player.PlayerStartupPlaybackPolicyTest' --tests 'com.nuvio.tv.ui.screens.player.PlayerFirstFrameCodecRecoveryPolicyTest' --tests 'com.nuvio.tv.ui.screens.player.PlayerAudioFallbackPolicyTest' --stacktrace -PlivetvTestBuild=true -PlivetvBuildNumber=19 -PlivetvVersionName=1.0.0-beta.4
 
       - name: Build signed epiSLATE Test APK after tests pass
-        run: ./gradlew :app:assembleFullRelease --stacktrace -PlivetvTestBuild=true -PlivetvBuildNumber=18 -PlivetvVersionName=1.0.0-beta.4
+        run: ./gradlew :app:assembleFullRelease --stacktrace -PlivetvTestBuild=true -PlivetvBuildNumber=19 -PlivetvVersionName=1.0.0-beta.4
 
       - name: Name epiSLATE test APK
         run: |
@@ -178,7 +178,7 @@ jobs:
           badging = Path('/tmp/epislate-test-badging.txt').read_text()
           manifest = Path('/tmp/epislate-test-manifest.txt').read_text()
           assert "name='com.nuvio.livetv.test'" in badging
-          assert "versionCode='107118'" in badging
+          assert "versionCode='107119'" in badging
           assert "versionName='1.0.0-beta.4'" in badging
           assert "application-label:'epiSLATE Test'" in badging
           icons = re.findall(r"^application-icon-\d+:'([^']+)'", badging, re.M)
@@ -187,7 +187,7 @@ jobs:
           with zipfile.ZipFile('epiSLATE-test.apk') as apk:
               for icon in set(icons):
                   assert apk.read(icon).startswith(b'\x89PNG\r\n\x1a\n'), icon
-          print('Verified Test 107118 identity, bitmap application icons, and roundIcon declaration.')
+          print('Verified Test 107119 identity, bitmap application icons, and roundIcon declaration.')
           print('Packaged icon paths:', sorted(set(icons)))
           PY
 

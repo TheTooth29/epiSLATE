@@ -1,5 +1,11 @@
 # Test-only official account password login experiment
 
+## Owner-approved revised sign-in UI
+
+After successful account/sync/session-persistence device testing on107118, owner requested email/password-only Test UI, hiding QR and its switch. Test107119 uses “Welcome to epiSLATE” / exact “Make yourself at home.”, email/password fields, Show/Hide control and pale-blue Sign in. No provider name, remote instruction, registration/forgot-password copy or raw server error text is displayed. Underlying QR implementation and regular/Trial/custom-server screens remain intact; this supersedes the original QR-visible Test UI below.
+
+Logo uses the actual EpiSlateProfileWordmark(lowerForPicker=true) component inside the same full-screen Column and profile-picker horizontalhuge/verticalxxxl padding; shared component supplies identical120dp height+16dp offset and asset. Profile screen is not redesigned. Password remains in-memory and clears on leaving/success. Server/session/sync methods unchanged; owner must check actual visual alignment, keyboard/focus and sign-in after build.
+
 Owner authorized an isolated experiment with an existing Nuvio-hosted email/password account. Not released or proven server-compatible, and not a statement of commercial hosted-service permission.
 
 Branch: work/test-email-password-login, based on owner-tested Beta4 adoption source26f3959. Planned Test107118, version1.0.0-beta.4, packagecom.nuvio.livetv.test. No merge, regular/Trial release, backend or Downloader changes.

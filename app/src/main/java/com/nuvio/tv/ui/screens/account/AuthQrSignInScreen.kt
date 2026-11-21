@@ -81,6 +81,10 @@ fun AuthQrSignInScreen(
     onContinue: (() -> Unit)? = null,
     viewModel: AccountViewModel = hiltViewModel()
 ) {
+    if (viewModel.offersTestEmailPasswordLogin) {
+        TestEmailSignInScreen(onBackPress, onContinue, viewModel)
+        return
+    }
     val uiState by viewModel.uiState.collectAsState()
     val fullAccount = uiState.authState as? AuthState.FullAccount
     val isSignedIn = fullAccount != null
