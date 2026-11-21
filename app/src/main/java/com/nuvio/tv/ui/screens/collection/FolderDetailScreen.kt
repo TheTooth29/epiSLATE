@@ -73,6 +73,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Tab
 import androidx.tv.material3.TabRow
+import androidx.tv.material3.TabDefaults
+import androidx.tv.material3.TabRowDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.nuvio.tv.domain.model.FolderViewMode
@@ -287,7 +289,7 @@ private fun TabbedGridContent(
     onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
-    if (!TabbedGridPreviewStore.isTestPackage(context.packageName) || uiState.viewMode != FolderViewMode.TABBED_GRID) {
+    if (!TabbedGridPreviewStore.supportsLayouts(context.packageName) || uiState.viewMode != FolderViewMode.TABBED_GRID) {
         OriginalTabbedGridContent(uiState, folder, tabFocusState, onSelectTab, onNavigateToDetail,
             onSaveFocusState, onLoadMore, isItemWatched, loadUsDigitalDate, onItemLongPress)
         return
@@ -297,8 +299,8 @@ private fun TabbedGridContent(
     var tabRestored by remember(folder.id, mode) { mutableStateOf(false) }
     LaunchedEffect(folder.id, mode, uiState.tabs.size) {
         if (!tabRestored && uiState.tabs.isNotEmpty()) {
-            onSelectTab(store.selectedTab(folder.id, mode, uiState.selectedTabIndex)
-                .coerceIn(uiState.tabs.indices))
+            onSelectTab(if (mode == TabbedGridPreview.ORIGINAL)
+                store.selectedTab(folder.id, mode, uiState.selectedTabIndex).coerceIn(uiState.tabs.indices) else 0)
             tabRestored = true
         }
     }
@@ -638,12 +640,23 @@ private fun PreviewTabbedGridContent(
     onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     mode: TabbedGridPreview
 ) {
+    val enhancedHeadingNavigation = uiState.viewMode == FolderViewMode.TABBED_GRID
     val tabFocusRequesters = remember(uiState.tabs.size) { uiState.tabs.indices.map { FocusRequester() } }
     var gridHasFocus by remember { mutableStateOf(false) }
     var gridScrollToTopTrigger by remember { mutableIntStateOf(0) }
+    var firstPosterRequest by remember { mutableIntStateOf(0) }
+    val posterEntry = remember(folder.id) { CatalogGridEntryPolicy() }
+    val gridEntryFocus = remember { FocusRequester() }
+    LaunchedEffect(folder.id, uiState.tabs.isNotEmpty()) {
+        if (enhancedHeadingNavigation && uiState.tabs.isNotEmpty()) {
+            onSelectTab(0)
+            withFrameNanos { }
+            runCatching { tabFocusRequesters.first().requestFocus() }
+        }
+    }
 
     // Grid Back: focus on grid -> move focus to active tab (grid stays scrolled).
-    BackHandler(enabled = gridHasFocus && uiState.tabs.size > 1) {
+    BackHandler(enabled = gridHasFocus && (uiState.tabs.size > 1 || (enhancedHeadingNavigation && uiState.tabs.isNotEmpty()))) {
         tabFocusRequesters.getOrNull(uiState.selectedTabIndex)?.let { runCatching { it.requestFocus() } }
     }
 
@@ -665,9 +678,17 @@ private fun PreviewTabbedGridContent(
             modifier = Modifier.widthIn(max = 300.dp)
         )
 
-        if (uiState.tabs.size > 1) {
+        if (uiState.tabs.size > 1 || (enhancedHeadingNavigation && uiState.tabs.isNotEmpty())) {
             TabRow(
                 selectedTabIndex = uiState.selectedTabIndex,
+                indicator = { positions, focused ->
+                    positions.getOrNull(uiState.selectedTabIndex)?.let { position ->
+                        TabRowDefaults.PillIndicator(position, focused,
+                            activeColor = if (enhancedHeadingNavigation)
+                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
+                                else MaterialTheme.colorScheme.onSurface)
+                    }
+                },
                 modifier = Modifier
                     .focusRestorer {
                         tabFocusRequesters.getOrNull(uiState.selectedTabIndex) ?: FocusRequester.Default
@@ -675,14 +696,36 @@ private fun PreviewTabbedGridContent(
             ) {
                 uiState.tabs.forEachIndexed { index, tab ->
                     Tab(
+                        colors = if (enhancedHeadingNavigation) TabDefaults.pillIndicatorTabColors(
+                            focusedContentColor = Color.White, focusedSelectedContentColor = Color.White,
+                            selectedContentColor = NuvioTheme.colors.TextSecondary
+                        ) else TabDefaults.pillIndicatorTabColors(),
                         selected = index == uiState.selectedTabIndex,
-                        onFocus = { onSelectTab(index) },
+                        onFocus = {
+                            if (enhancedHeadingNavigation) posterEntry.cancel()
+                            onSelectTab(index)
+                        },
                         onClick = {
                             onSelectTab(index)
                             gridScrollToTopTrigger++
                         },
                         modifier = if (index < tabFocusRequesters.size) {
                             Modifier.focusRequester(tabFocusRequesters[index])
+                                .then(if (enhancedHeadingNavigation) Modifier.focusProperties {
+                                    left = tabFocusRequesters.getOrNull(index - 1) ?: FocusRequester.Cancel
+                                    right = tabFocusRequesters.getOrNull(index + 1) ?: FocusRequester.Cancel
+                                    up = FocusRequester.Cancel
+                                } else Modifier)
+                                .onPreviewKeyEvent { event ->
+                                if (enhancedHeadingNavigation &&
+                                    event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
+                                    if (event.type == KeyEventType.KeyDown) {
+                                        posterEntry.request(index)
+                                        firstPosterRequest++
+                                    }
+                                    true
+                                } else false
+                            }
                         } else Modifier
                     ) {
                         Column(
@@ -759,12 +802,13 @@ private fun PreviewTabbedGridContent(
                 mutableStateOf(tabFocusState.focusedItemKey)
             }
             val gridState = rememberLazyGridState(
-                initialFirstVisibleItemIndex = tabFocusState.verticalScrollIndex,
-                initialFirstVisibleItemScrollOffset = tabFocusState.verticalScrollOffset
+                initialFirstVisibleItemIndex = if (enhancedHeadingNavigation) 0 else tabFocusState.verticalScrollIndex,
+                initialFirstVisibleItemScrollOffset = if (enhancedHeadingNavigation) 0 else tabFocusState.verticalScrollOffset
             )
 
             var focusedIndex by remember { mutableIntStateOf(-1) }
-            var firstRow by remember { mutableIntStateOf(tabFocusState.verticalScrollIndex / mode.columns) }
+            var firstRow by remember { mutableIntStateOf(
+                if (enhancedHeadingNavigation) 0 else tabFocusState.verticalScrollIndex / mode.columns) }
             LaunchedEffect(focusedIndex) {
                 if (focusedIndex >= 0) {
                     val target = mode.firstRow(focusedIndex / mode.columns, firstRow)
@@ -789,6 +833,7 @@ private fun PreviewTabbedGridContent(
             }
 
             LaunchedEffect(tabFocusState.verticalScrollIndex, tabFocusState.verticalScrollOffset) {
+                if (enhancedHeadingNavigation) return@LaunchedEffect
                 val targetIndex = tabFocusState.verticalScrollIndex
                 val targetOffset = tabFocusState.verticalScrollOffset
                 if (gridState.firstVisibleItemIndex == targetIndex &&
@@ -803,6 +848,7 @@ private fun PreviewTabbedGridContent(
 
             var focusRestored by remember { mutableStateOf(false) }
             LaunchedEffect(items, tabFocusState.hasSavedFocus, tabFocusState.focusedItemKey) {
+                if (enhancedHeadingNavigation) return@LaunchedEffect
                 if (focusRestored) return@LaunchedEffect
                 val targetKey = tabFocusState.focusedItemKey ?: return@LaunchedEffect
                 if (!tabFocusState.hasSavedFocus) return@LaunchedEffect
@@ -814,6 +860,16 @@ private fun PreviewTabbedGridContent(
                 }
             }
 
+            LaunchedEffect(firstPosterRequest, items.size) {
+                if (enhancedHeadingNavigation && posterEntry.targets(uiState.selectedTabIndex) && items.isNotEmpty()) {
+                    gridState.scrollToItem(0)
+                    repeat(2) { withFrameNanos { } }
+                    if (posterEntry.targets(uiState.selectedTabIndex) &&
+                        runCatching { gridEntryFocus.requestFocus(androidx.compose.ui.focus.FocusDirection.Enter) }.getOrDefault(false)) {
+                        posterEntry.completed(uiState.selectedTabIndex)
+                    }
+                }
+            }
             val catalogRow = currentTab.catalogRow
             LaunchedEffect(gridState, items.size) {
                 snapshotFlow {
@@ -850,9 +906,9 @@ private fun PreviewTabbedGridContent(
                     .fillMaxWidth()
                     .align(Alignment.Center)
                     .onFocusChanged { gridHasFocus = it.hasFocus }
-                    .focusRestorer {
+                    .then(if (enhancedHeadingNavigation) Modifier else Modifier.focusRestorer {
                         lastFocusedItemKey?.let { itemFocusRequesters[it] } ?: FocusRequester.Default
-                    }
+                    })
                     .dpadRepeatThrottle(),
                 contentPadding = PaddingValues(
                     start = NuvioTheme.spacing.xxxl,
@@ -868,13 +924,15 @@ private fun PreviewTabbedGridContent(
                     key = { index, item -> "${item.id}_$index" }
                 ) { index, item ->
                     val itemKey = "${item.id}_$index"
-                    val focusReq = itemFocusRequesters.getOrPut(itemKey) { FocusRequester() }
+                    val focusReq = if (enhancedHeadingNavigation && index == 0) gridEntryFocus
+                        else itemFocusRequesters.getOrPut(itemKey) { FocusRequester() }
                     val useDigitalDate = item.apiType == "movie"
                     val digitalDate by produceState<String?>(null, item.id, useDigitalDate) {
                         if (useDigitalDate) value = loadUsDigitalDate?.invoke(item.id)
                     }
                     GridContentCard(
                         modifier = Modifier.height(rowHeight),
+                        showNeutralOutline = enhancedHeadingNavigation,
                         item = item,
                         yearLabelOverride = (if (item.apiType == "series") formatGridReleaseDate(item.released) else digitalDate)
                             ?.uppercase(java.util.Locale.US),
@@ -882,6 +940,8 @@ private fun PreviewTabbedGridContent(
                         releaseLabelTopPadding = dateTopPadding,
                         posterCardStyle = posterCardStyle,
                         focusRequester = focusReq,
+                        upFocusRequester = if (enhancedHeadingNavigation && index < mode.columns)
+                            tabFocusRequesters.getOrNull(uiState.selectedTabIndex) else null,
                         isWatched = isItemWatched(item),
                         showYearOnly = true,
                         onFocused = { lastFocusedItemKey = itemKey; focusedIndex = index },

@@ -69,7 +69,7 @@ data class FolderDetailUiState(
     val homeImdbRatingsVisibility: HomeImdbRatingsVisibility = HomeImdbRatingsVisibility.SHOW_ALL,
     val posterLabelsEnabled: Boolean = true,
     val catalogAddonNameEnabled: Boolean = true,
-    val catalogTypeSuffixEnabled: Boolean = true,
+    val catalogTypeSuffixEnabled: Boolean = false,
     val hideUnreleasedContent: Boolean = false,
     val showFullReleaseDate: Boolean = true,
     val modernLandscapePostersEnabled: Boolean = false,

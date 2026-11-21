@@ -152,6 +152,49 @@ class HomeViewModel @Inject constructor(
     private val _gridFocusState = MutableStateFlow(HomeScreenFocusState())
     val gridFocusState: StateFlow<HomeScreenFocusState> = _gridFocusState.asStateFlow()
 
+    private val catalogReturn = CatalogReturnPolicy()
+    private var catalogReturnObserver: kotlinx.coroutines.Job? = null
+    private fun catalogWatchingSignature(items: List<ContinueWatchingItem>): List<String> = items.map { item ->
+        when (item) {
+            is ContinueWatchingItem.InProgress -> item.progress.let {
+                "progress:${it.contentId}:${it.videoId}:${it.season}:${it.episode}:${it.position}:${it.lastWatched}"
+            }
+            is ContinueWatchingItem.NextUp -> item.info.let {
+                "next:${it.contentId}:${it.videoId}:${it.season}:${it.episode}:${it.lastWatched}"
+            }
+        }
+    }
+    fun beginCatalogVisit() {
+        catalogReturn.depart(catalogWatchingSignature(_uiState.value.continueWatchingItems))
+        catalogReturnObserver?.cancel()
+        catalogReturnObserver = viewModelScope.launch {
+            combine(
+                _uiState.map { catalogWatchingSignature(it.continueWatchingItems) }.distinctUntilChanged(),
+                com.nuvio.tv.core.player.PlayerSessionTracker.isSessionOpen
+            ) { signature, playerOpen -> signature to playerOpen }.collect { (signature, playerOpen) ->
+                if (playerOpen) catalogReturn.recordPlayback()
+                if (catalogReturn.update(signature)) focusCatalogContinueWatching()
+            }
+        }
+    }
+    fun cancelCatalogReturn() {
+        catalogReturn.cancel()
+        catalogReturnObserver?.cancel()
+    }
+    fun setCatalogHomeVisible(visible: Boolean) {
+        catalogReturn.setHome(visible)
+        if (visible && catalogReturn.update(catalogWatchingSignature(_uiState.value.continueWatchingItems))) {
+            focusCatalogContinueWatching()
+        }
+    }
+    private fun focusCatalogContinueWatching() {
+        if (!_uiState.value.continueWatchingEnabled) return
+        _focusState.update { it.copy(verticalScrollIndex = 0, verticalScrollOffset = 0,
+            focusedRowKey = "continue_watching", focusedRowIndex = -1, focusedItemIndex = 0,
+            focusedItemKeyByRow = it.focusedItemKeyByRow - "continue_watching", hasSavedFocus = true) }
+        _scrollToTopTrigger.value++
+    }
+
     private val _scrollToTopTrigger = MutableStateFlow(0)
     val scrollToTopTrigger: StateFlow<Int> = _scrollToTopTrigger.asStateFlow()
 

@@ -184,13 +184,7 @@ internal fun ModernSidebarBlurPanel(
                     .offset(y = NuvioTheme.spacing.md),
                 contentAlignment = Alignment.Center
             ) {
-                BrandWordmark(
-                    contentDescription = stringResource(R.string.app_name),
-                    modifier = Modifier
-                        .fillMaxWidth(0.72f)
-                        .height(36.dp),
-                    alpha = sidebarLabelAlpha
-                )
+
             }
         }
 

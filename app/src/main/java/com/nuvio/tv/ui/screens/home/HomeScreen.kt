@@ -105,8 +105,11 @@ fun HomeScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.setCatalogHomeVisible(true)
                 viewModel.beginShuffleHomeVisit()
                 viewModel.refreshHomeCatalogsIfStale()
+            } else if (event == Lifecycle.Event.ON_PAUSE) {
+                viewModel.setCatalogHomeVisible(false)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -687,17 +690,32 @@ private fun ModernHomeRoute(
         failedEnrichmentIds = failedEnrichmentIds,
         trailerPreviewUrls = viewModel.trailerPreviewUrls,
         trailerPreviewAudioUrls = viewModel.trailerPreviewAudioUrls,
-        onNavigateToDetail = onNavigateToDetail,
-        onContinueWatchingClick = onContinueWatchingClick,
-        onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
-        onContinueWatchingPlayManually = onContinueWatchingPlayManually,
+        onNavigateToDetail = { id, type, addon ->
+            viewModel.cancelCatalogReturn()
+            onNavigateToDetail(id, type, addon)
+        },
+        onContinueWatchingClick = { item ->
+            viewModel.cancelCatalogReturn()
+            onContinueWatchingClick(item)
+        },
+        onContinueWatchingStartFromBeginning = { item ->
+            viewModel.cancelCatalogReturn()
+            onContinueWatchingStartFromBeginning(item)
+        },
+        onContinueWatchingPlayManually = { item ->
+            viewModel.cancelCatalogReturn()
+            onContinueWatchingPlayManually(item)
+        },
         showContinueWatchingManualPlayOption = showContinueWatchingManualPlayOption,
         onRequestTrailerPreview = requestTrailerPreview,
         onLoadMoreCatalog = loadMoreCatalog,
         onRemoveContinueWatching = removeContinueWatching,
         isCatalogItemWatched = isCatalogItemWatched,
         onCatalogItemLongPress = onCatalogItemLongPress,
-        onNavigateToFolderDetail = onNavigateToFolderDetail,
+        onNavigateToFolderDetail = { collection, folder ->
+            viewModel.beginCatalogVisit()
+            onNavigateToFolderDetail(collection, folder)
+        },
         onItemFocus = remember(viewModel) {
             { item -> viewModel.onItemFocus(item) }
         },

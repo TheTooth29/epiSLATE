@@ -12,7 +12,7 @@ internal enum class TabbedGridPreview(val label: String, val columns: Int, val r
 
     companion object {
         fun fromStored(value: String?): TabbedGridPreview =
-            entries.firstOrNull { it.name == value } ?: ORIGINAL
+            if (value == null) TWO_ROWS else entries.firstOrNull { it.name == value } ?: ORIGINAL
     }
 
     fun firstRow(focusedRow: Int, currentFirstRow: Int): Int = when (this) {
@@ -45,7 +45,7 @@ internal fun tabbedGridPreviewGeometry(
     return TabbedGridPreviewGeometry(cardWidth, rowHeight, if (centered) rowHeight + 24f else height)
 }
 
-/** Deliberately separate from production preferences and restricted to the Test package. */
+/** Layout choices are separate from profile data; existing named selections remain compatible. */
 internal class TabbedGridPreviewStore private constructor(context: Context) {
     private val preferences = context.getSharedPreferences("tabbed_grid_preview", Context.MODE_PRIVATE)
     private val _mode = MutableStateFlow(TabbedGridPreview.fromStored(preferences.getString("mode", null)))
@@ -77,10 +77,10 @@ internal class TabbedGridPreviewStore private constructor(context: Context) {
     }
 
     companion object {
-        fun isTestPackage(packageName: String) = packageName == "com.nuvio.livetv.test"
+        fun supportsLayouts(packageName: String) = packageName in setOf("com.nuvio.livetv", "com.nuvio.livetv.test")
         @Volatile private var instance: TabbedGridPreviewStore? = null
         fun get(context: Context): TabbedGridPreviewStore {
-            check(isTestPackage(context.packageName))
+            check(supportsLayouts(context.packageName))
             return instance ?: synchronized(this) {
                 instance ?: TabbedGridPreviewStore(context.applicationContext).also { instance = it }
             }
