@@ -25,7 +25,7 @@ def identity(badging, channel):
 def certificate_digests(report):
     # apksigner uses numbered signers or SDK-range names for v3.1 signatures.
     # Source-stamp and public-key hashes must never be mistaken for APK signer certs.
-    pattern = r'^Signer(?: #\d+)?(?: \([^\r\n]+\))? certificate SHA-256 digest:\s*([0-9a-fA-F]{64})\s*$'
+    pattern = r'^(?:Signer(?: #\d+)?(?: \([^\r\n]+\))?|V[1-4](?:\.1)? Signer:) certificate SHA-256 digest:\s*([0-9a-fA-F]{64})\s*$'
     return list(dict.fromkeys(value.lower() for value in re.findall(pattern, report, re.M)))
 
 def filename(channel, version, code, run):
