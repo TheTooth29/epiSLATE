@@ -33,3 +33,7 @@ Based on regular Beta 4. These changes passed the owner’s Test APK device sequ
 ## Scope
 
 Keep the current full-version exit strategy. This update does not add Trial licensing, activation, PIN restrictions, notices, Trial exit/contact information or its button colours. It does not reset profiles, progress or watched history. No regular release, protected-branch merge, signing/package change or Downloader replacement is included in the implementation authorization.
+
+
+## Separate Test-only experiment
+Email/password login and the revised Trial-style sign-in screen remain a separate Test experiment, not an approved regular-release feature. See [Test107120 notes](TEST-107120.md). The107118 account/sync/session tests passed, but the redesigned107120screen still needs its own TV checks. Do not merge those statuses into the completed107117collection/ContinueWatching device pass. Current channel/version inventory is in the workspace RELEASES.md.

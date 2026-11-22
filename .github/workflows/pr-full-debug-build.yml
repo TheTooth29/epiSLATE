@@ -33,6 +33,7 @@ jobs:
         run: |
           python3 scripts/check-personal-customizations.py
           python3 scripts/check-tabbed-grid-original.py
+          python3 -m unittest discover -s scripts/tests -p test_apk_build_record.py
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -191,10 +192,25 @@ jobs:
           print('Packaged icon paths:', sorted(set(icons)))
           PY
 
+      - name: Record verified Test build and release notes
+        run: |
+          aapt=$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -V | tail -n 1)
+          python3 scripts/record-apk-build.py --channel test --apk epiSLATE-test.apk --aapt "$aapt" --signing-report /tmp/epislate-test-signing.txt --notes docs/releases/TEST-107120.md --output out
+
       - name: Upload epiSLATE Test APK
         uses: actions/upload-artifact@v7
         with:
-          path: epiSLATE-test.apk
+          path: out/epiSLATE-Test-*.apk
           archive: false
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload Test build record and release notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: epiSLATE-Test-build-record-${{ github.run_number }}
+          path: |
+            out/BUILD-RECORD.json
+            out/RELEASE-NOTES.md
           if-no-files-found: error
           retention-days: 7

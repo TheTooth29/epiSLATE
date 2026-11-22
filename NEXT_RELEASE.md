@@ -1,6 +1,8 @@
-# Next-release feature set
+# Next-release feature set — historical record
 
-Base: tested Beta 3, `c5b155f9ca54b23116742caf2dd92878b7cd9872`.
+Current regular baseline is **Beta4**. Current user-facing changes: [unreleased notes](docs/releases/UNRELEASED.md). Current Test-only sign-in work: [Test107120 notes](docs/releases/TEST-107120.md). Channel/version/build inventory: [project release index](../RELEASES.md). Older pending wording below is retained as dated implementation history, not current release status.
+
+Historical base: tested Beta 3, `c5b155f9ca54b23116742caf2dd92878b7cd9872`.
 The regular Beta 3 branch/APK and protected dev baseline are not replaced by this work.
 
 ## Changes

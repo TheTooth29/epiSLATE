@@ -1,5 +1,7 @@
 # Test-only official account password login experiment
 
+**Current:** Test107120, approved Trial-style preview; CI passed at550cf2f/run85, revised-screen TV tests pending. Test107118 proved existing-account email/password, sync and reopened-session behavior on a fresh install;107119 is visually rejected/superseded despite passing CI. Earlier “unverified/pending” statements below are historical stages. Current candidate notes: [TEST-107120.md](../releases/TEST-107120.md).
+
 ## Owner-approved revised sign-in UI
 
 After successful account/sync/session-persistence device testing on107118, owner requested email/password-only Test UI, hiding QR and its switch. Test107119 uses “Welcome to epiSLATE” / exact “Make yourself at home.”, email/password fields, Show/Hide control and pale-blue Sign in. No provider name, remote instruction, registration/forgot-password copy or raw server error text is displayed. Underlying QR implementation and regular/Trial/custom-server screens remain intact; this supersedes the original QR-visible Test UI below.
