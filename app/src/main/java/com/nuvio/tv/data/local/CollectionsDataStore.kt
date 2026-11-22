@@ -72,6 +72,22 @@ class CollectionsDataStore @Inject constructor(
         }
     }
 
+    /** Merge catalog sources only; leave folder artwork, order, and other profile data intact. */
+    suspend fun updateFolderSources(collectionId: String, replacements: Map<String, CollectionFolder>,
+        profileId: Int = profileManager.activeProfileId.value) {
+        store(profileId).edit { prefs ->
+            val current = parseCollections(prefs[collectionsKey])
+            val updated = current.map { collection ->
+                if (collection.id != collectionId) collection else collection.copy(
+                    folders = collection.folders.map { folder ->
+                        replacements[folder.id]?.let { folder.copy(sources = it.sources) } ?: folder
+                    }
+                )
+            }
+            if (updated != current) prefs[collectionsKey] = gson.toJson(updated.map { it.toSerializable() })
+        }
+    }
+
     suspend fun addCollection(collection: Collection) {
         store().edit { prefs ->
             val current = parseCollections(prefs[collectionsKey]).toMutableList()
