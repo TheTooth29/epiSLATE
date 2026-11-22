@@ -22,6 +22,12 @@ def identity(badging, channel):
         raise ValueError('Trial version suffix does not match APK channel')
     return package, int(code), version
 
+def certificate_digests(report):
+    # apksigner uses numbered signers or SDK-range names for v3.1 signatures.
+    # Source-stamp and public-key hashes must never be mistaken for APK signer certs.
+    pattern = r'^Signer(?: #\d+)?(?: \([^\r\n]+\))? certificate SHA-256 digest:\s*([0-9a-fA-F]{64})\s*$'
+    return list(dict.fromkeys(value.lower() for value in re.findall(pattern, report, re.M)))
+
 def filename(channel, version, code, run):
     if not str(run).isdigit() or int(run) < 1:
         raise ValueError('A positive workflow run number is required')
@@ -39,9 +45,11 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     package, code, version = identity(subprocess.check_output([args.aapt, 'dump', 'badging', str(args.apk)], text=True), args.channel)
-    certificates = re.findall(r'Signer #\d+ certificate SHA-256 digest: ([0-9a-fA-F]{64})', args.signing_report.read_text())
-    if not certificates or not args.notes.is_file():
-        raise ValueError('Verified signing report and release notes are required')
+    certificates = certificate_digests(args.signing_report.read_text())
+    if not certificates:
+        raise ValueError('No APK signer certificate digest found in verified signing report')
+    if not args.notes.is_file():
+        raise ValueError('Release notes file missing: ' + str(args.notes))
     if str(code) not in args.notes.read_text(encoding='utf-8').splitlines()[0]:
         raise ValueError('Release-note heading must identify this exact Android version code')
     source = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
