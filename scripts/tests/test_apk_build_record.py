@@ -52,4 +52,21 @@ class ApkBuildRecordTest(unittest.TestCase):
             self.assertEqual(record['device_testing'], 'not established by this build')
             self.assertTrue((output / record['filename']).exists())
 
+class SigningReportTest(unittest.TestCase):
+    def test_numbered_and_sdk_range_signers(self):
+        digest = 'a'*64
+        report = '\n'.join([
+            'Signer #1 certificate SHA-256 digest: ' + digest,
+            'Signer (minSdkVersion=33, maxSdkVersion=2147483647) certificate SHA-256 digest: ' + digest.upper(),
+            'Signer #2 (minSdkVersion=28, maxSdkVersion=32) certificate SHA-256 digest: ' + 'b'*64,
+        ])
+        self.assertEqual(module.certificate_digests(report), [digest, 'b'*64])
+    def test_only_real_signer_certificate_digests_are_accepted(self):
+        report = '\n'.join([
+            'Source Stamp Signer certificate SHA-256 digest: ' + 'a'*64,
+            'Signer #1 public key SHA-256 digest: ' + 'b'*64,
+            'Signer #1 certificate SHA-256 digest: too-short',
+        ])
+        self.assertEqual(module.certificate_digests(report), [])
+
 if __name__ == '__main__': unittest.main()

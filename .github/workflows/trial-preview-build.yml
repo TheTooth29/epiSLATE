@@ -148,6 +148,7 @@ jobs:
           build_tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
           python3 scripts/verify-trial-apk.py "$apk" "$build_tools/aapt" app/build/generated/source/buildConfig/full/release/com/nuvio/tv/BuildConfig.java
           "$build_tools/apksigner" verify --verbose --print-certs "$apk" > "$RUNNER_TEMP/trial-signing.txt"
+          grep 'certificate SHA-256 digest:' "$RUNNER_TEMP/trial-signing.txt"
           python3 scripts/record-apk-build.py --channel trial --apk "$apk" --aapt "$build_tools/aapt" --signing-report "$RUNNER_TEMP/trial-signing.txt" --notes docs/releases/TRIAL-107118.md --output out
           sha256sum out/epiSLATE-Trial-*.apk
 
