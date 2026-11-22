@@ -69,4 +69,14 @@ class SigningReportTest(unittest.TestCase):
         ])
         self.assertEqual(module.certificate_digests(report), [])
 
+class ActualCiSigningReportTest(unittest.TestCase):
+    def test_exact_trial16_v2_signer_line(self):
+        digest = 'e2c9a67239c6297fb28a28b72a088ad32cff8aeb94e0157b02d22ee7aeb5cbd8'
+        report = 'V2 Signer: certificate SHA-256 digest: ' + digest
+        self.assertEqual(module.certificate_digests(report), [digest])
+    def test_scheme_labels_do_not_admit_stamp_or_public_key(self):
+        for version in ['1','2','3','3.1','4']:
+            self.assertEqual(module.certificate_digests('V' + version + ' Signer: certificate SHA-256 digest: ' + 'a'*64), ['a'*64])
+        self.assertEqual(module.certificate_digests('V2 Signer: public key SHA-256 digest: ' + 'a'*64), [])
+
 if __name__ == '__main__': unittest.main()
