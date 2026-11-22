@@ -83,6 +83,8 @@ class TrialPreset @Inject constructor(
             check(marker.edit().putBoolean("sidebar_defaults_v1_applied", true).commit())
         }
         if (marker.getBoolean("v1_applied", false)) {
+            applyDiscoverCatalogSources(marker)
+            applyNewReleasesMovieOrder(marker)
             applyAddonDisplayName(marker)
             return@withContext
         }
@@ -112,7 +114,29 @@ class TrialPreset @Inject constructor(
         experience.setAddonSetupSkipped(true)
         onboarding.setHasSeenAuthQrOnFirstLaunch(true)
         check(marker.edit().putBoolean("v1_applied", true).commit())
+        applyDiscoverCatalogSources(marker)
+        applyNewReleasesMovieOrder(marker)
         applyAddonDisplayName(marker)
+    }
+
+    private suspend fun applyNewReleasesMovieOrder(marker: android.content.SharedPreferences) {
+        val migration = "new_releases_movies_first_v1_applied"
+        if (marker.getBoolean(migration, false)) return
+        collections.moveMovieCatalogsFirst(TrialContentPolicy.DISCOVER, "folder-bc-734b38fd11b8", profileId = 1)
+        check(marker.edit().putBoolean(migration, true).commit())
+    }
+
+    private suspend fun applyDiscoverCatalogSources(marker: android.content.SharedPreferences) {
+        val migration = "discover_catalogs_20261122_applied"
+        if (marker.getBoolean(migration, false)) return
+        val preset = context.assets.open("trial-preset.json").bufferedReader().use { JSONObject(it.readText()) }
+        if (preset.optString("discoverCatalogsRevision") != "2026-11-22") return
+        val ids = setOf("folder-bc-734b38fd11b8", "folder-b790c003")
+        val updated = collections.importFromJson(preset.getJSONArray("collections").toString())
+            .first { it.id == TrialContentPolicy.DISCOVER }.folders.filter { it.id in ids }.associateBy { it.id }
+        require(updated.keys == ids && updated.values.all { it.sources.isNotEmpty() })
+        collections.updateFolderSources(TrialContentPolicy.DISCOVER, updated, profileId = 1)
+        check(marker.edit().putBoolean(migration, true).commit())
     }
 
     private suspend fun applyAddonDisplayName(marker: android.content.SharedPreferences) {
@@ -149,7 +173,7 @@ fun TrialPresetGate(preset: TrialPreset, content: @Composable () -> Unit) {
 
 object TrialContentPolicy {
     const val DISCOVER = "collection-bc-9d385ff48f9d4204-2"
-    private val locked = setOf("folder-bc-734b38fd11b8", "b466d553-3d52-4957-8f81-571aeb9cc295", "folder-bc-32ca7bd381b2", "folder-b790c003")
+    private val locked = setOf("b466d553-3d52-4957-8f81-571aeb9cc295", "folder-bc-32ca7bd381b2")
     fun locked(collectionId: String, folderId: String) = BuildConfig.TRIAL_ENABLED && collectionId == DISCOVER && folderId in locked
 }
 
