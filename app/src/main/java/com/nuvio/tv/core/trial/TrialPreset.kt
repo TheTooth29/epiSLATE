@@ -84,6 +84,7 @@ class TrialPreset @Inject constructor(
         }
         if (marker.getBoolean("v1_applied", false)) {
             applyDiscoverCatalogSources(marker)
+            applyNewReleasesMovieOrder(marker)
             applyAddonDisplayName(marker)
             return@withContext
         }
@@ -114,7 +115,15 @@ class TrialPreset @Inject constructor(
         onboarding.setHasSeenAuthQrOnFirstLaunch(true)
         check(marker.edit().putBoolean("v1_applied", true).commit())
         applyDiscoverCatalogSources(marker)
+        applyNewReleasesMovieOrder(marker)
         applyAddonDisplayName(marker)
+    }
+
+    private suspend fun applyNewReleasesMovieOrder(marker: android.content.SharedPreferences) {
+        val migration = "new_releases_movies_first_v1_applied"
+        if (marker.getBoolean(migration, false)) return
+        collections.moveMovieCatalogsFirst(TrialContentPolicy.DISCOVER, "folder-bc-734b38fd11b8", profileId = 1)
+        check(marker.edit().putBoolean(migration, true).commit())
     }
 
     private suspend fun applyDiscoverCatalogSources(marker: android.content.SharedPreferences) {

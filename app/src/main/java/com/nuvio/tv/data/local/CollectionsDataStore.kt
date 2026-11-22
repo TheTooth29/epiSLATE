@@ -88,6 +88,23 @@ class CollectionsDataStore @Inject constructor(
         }
     }
 
+    /** Stable partition of one folder only; source settings and other catalog ordering are retained. */
+    suspend fun moveMovieCatalogsFirst(collectionId: String, folderId: String, profileId: Int) {
+        store(profileId).edit { prefs ->
+            val current = parseCollections(prefs[collectionsKey])
+            val updated = current.map { collection ->
+                if (collection.id != collectionId) collection else collection.copy(
+                    folders = collection.folders.map { folder ->
+                        if (folder.id != folderId) folder else folder.copy(sources = folder.sources.sortedBy {
+                            if (it is AddonCatalogCollectionSource && it.type == "movie") 0 else 1
+                        })
+                    }
+                )
+            }
+            if (updated != current) prefs[collectionsKey] = gson.toJson(updated.map { it.toSerializable() })
+        }
+    }
+
     suspend fun addCollection(collection: Collection) {
         store().edit { prefs ->
             val current = parseCollections(prefs[collectionsKey]).toMutableList()
