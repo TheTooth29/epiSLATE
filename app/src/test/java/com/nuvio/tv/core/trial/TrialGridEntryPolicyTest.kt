@@ -4,6 +4,13 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class TrialGridEntryPolicyTest {
+    @Test fun detailReturnRetainsItsHeadingButNewCategoryStartsAtFirst() {
+        assertEquals(2, TrialFolderFocusPolicy.initialTab(2, 4))
+        assertEquals(0, TrialFolderFocusPolicy.initialTab(-1, 4))
+        assertEquals(0, TrialFolderFocusPolicy.initialTab(4, 4))
+        assertEquals(0, TrialFolderFocusPolicy.initialTab(0, 0))
+    }
+
     @Test fun horizontalHeadingMovementDoesNotRequestGridFocus() {
         val entry = TrialGridEntryPolicy()
         assertFalse(entry.targets(0))

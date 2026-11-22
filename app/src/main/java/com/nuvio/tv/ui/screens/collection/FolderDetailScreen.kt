@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -294,12 +295,22 @@ private fun TabbedGridContent(
             onSaveFocusState, onLoadMore, isItemWatched, loadUsDigitalDate, onItemLongPress)
         return
     }
+    // Save only a detail-navigation intent in this back-stack entry. A new folder visit has none.
+    var pendingDetailTab by rememberSaveable(folder.id) { mutableIntStateOf(-1) }
+    val detailReturnTab = remember(folder.id) { pendingDetailTab }
+    val restoreTrialPoster = com.nuvio.tv.BuildConfig.TRIAL_ENABLED &&
+        pendingDetailTab >= 0 && detailReturnTab == uiState.selectedTabIndex
+    val detailNavigate: (String, String, String) -> Unit = { id, type, addon ->
+        if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) pendingDetailTab = uiState.selectedTabIndex
+        onNavigateToDetail(id, type, addon)
+    }
     val store = remember(context) { TabbedGridPreviewStore.get(context) }
     val mode by store.mode.collectAsStateWithLifecycle()
     var tabRestored by remember(folder.id, mode) { mutableStateOf(false) }
     LaunchedEffect(folder.id, mode, uiState.tabs.size) {
         if (!tabRestored && uiState.tabs.isNotEmpty()) {
-            onSelectTab(if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) 0 else
+            onSelectTab(if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED)
+                com.nuvio.tv.core.trial.TrialFolderFocusPolicy.initialTab(detailReturnTab, uiState.tabs.size) else
                 store.selectedTab(folder.id, mode, uiState.selectedTabIndex).coerceIn(uiState.tabs.indices))
             tabRestored = true
         }
@@ -320,12 +331,18 @@ private fun TabbedGridContent(
         if (mode == TabbedGridPreview.ORIGINAL) {
             OriginalTabbedGridContent(uiState, folder,
                 if (saved.hasSavedFocus) saved else tabFocusState,
-                onSelectTab, onNavigateToDetail, save, onLoadMore, isItemWatched,
-                loadUsDigitalDate, onItemLongPress)
+                onSelectTab, detailNavigate, save, onLoadMore, isItemWatched,
+                loadUsDigitalDate, onItemLongPress,
+                restoreTrialPoster = restoreTrialPoster,
+                skipTrialHeadingOnEntry = detailReturnTab >= 0,
+                onTrialPosterRestored = { pendingDetailTab = -1 })
         } else {
-            PreviewTabbedGridContent(uiState, folder, saved, onSelectTab, onNavigateToDetail,
+            PreviewTabbedGridContent(uiState, folder, saved, onSelectTab, detailNavigate,
                 { index, offset, focus -> store.save(positionKey, index, offset, focus) },
-                onLoadMore, isItemWatched, loadUsDigitalDate, onItemLongPress, mode)
+                onLoadMore, isItemWatched, loadUsDigitalDate, onItemLongPress, mode,
+                restoreTrialPoster = restoreTrialPoster,
+                skipTrialHeadingOnEntry = detailReturnTab >= 0,
+                onTrialPosterRestored = { pendingDetailTab = -1 })
         }
     }
 }
@@ -342,7 +359,10 @@ private fun OriginalTabbedGridContent(
     onLoadMore: () -> Unit = {},
     isItemWatched: (MetaPreview) -> Boolean = { false },
     loadUsDigitalDate: (suspend (String) -> String?)? = null,
-    onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> }
+    onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
+    restoreTrialPoster: Boolean = false,
+    skipTrialHeadingOnEntry: Boolean = false,
+    onTrialPosterRestored: () -> Unit = {}
 ) {
     val tabFocusRequesters = remember(uiState.tabs.size) { uiState.tabs.indices.map { FocusRequester() } }
     var gridHasFocus by remember { mutableStateOf(false) }
@@ -351,7 +371,7 @@ private fun OriginalTabbedGridContent(
     val posterEntry = remember(folder.id) { com.nuvio.tv.core.trial.TrialGridEntryPolicy() }
     val gridEntryFocus = remember { FocusRequester() }
     LaunchedEffect(folder.id, uiState.tabs.isNotEmpty()) {
-        if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && uiState.tabs.isNotEmpty()) {
+        if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && !skipTrialHeadingOnEntry && uiState.tabs.isNotEmpty()) {
             onSelectTab(0)
             withFrameNanos { }
             runCatching { tabFocusRequesters.first().requestFocus() }
@@ -491,12 +511,13 @@ private fun OriginalTabbedGridContent(
                 mutableStateOf(tabFocusState.focusedItemKey)
             }
             val gridState = rememberLazyGridState(
-                initialFirstVisibleItemIndex = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) 0 else tabFocusState.verticalScrollIndex,
-                initialFirstVisibleItemScrollOffset = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) 0 else tabFocusState.verticalScrollOffset
+                initialFirstVisibleItemIndex = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && !restoreTrialPoster) 0 else tabFocusState.verticalScrollIndex,
+                initialFirstVisibleItemScrollOffset = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && !restoreTrialPoster) 0 else tabFocusState.verticalScrollOffset
             )
 
             // Scroll grid to top when OK is pressed on a tab or tab changes
             LaunchedEffect(gridScrollToTopTrigger, uiState.selectedTabIndex) {
+                if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && skipTrialHeadingOnEntry && gridScrollToTopTrigger == 0) return@LaunchedEffect
                 if (gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 0) {
                     gridState.scrollToItem(0, 0)
                 }
@@ -527,7 +548,20 @@ private fun OriginalTabbedGridContent(
             }
 
             LaunchedEffect(items, tabFocusState.hasSavedFocus, tabFocusState.focusedItemKey) {
-                if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) return@LaunchedEffect
+                if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) {
+                    if (!restoreTrialPoster) return@LaunchedEffect
+                    val targetKey = tabFocusState.focusedItemKey ?: return@LaunchedEffect
+                    val targetIndex = items.indices.firstOrNull { "${items[it].id}_$it" == targetKey }
+                        ?: return@LaunchedEffect
+                    gridState.scrollToItem(tabFocusState.verticalScrollIndex, tabFocusState.verticalScrollOffset)
+                    repeat(2) { withFrameNanos { } }
+                    val requester = itemFocusRequesters[targetKey] ?: return@LaunchedEffect
+                    if (runCatching { requester.requestFocus(androidx.compose.ui.focus.FocusDirection.Enter) }.getOrDefault(false)) {
+                        lastFocusedItemKey = targetKey
+                        onTrialPosterRestored()
+                    }
+                    return@LaunchedEffect
+                }
                 val targetKey = tabFocusState.focusedItemKey ?: return@LaunchedEffect
                 if (!tabFocusState.hasSavedFocus) return@LaunchedEffect
                 val requester = itemFocusRequesters[targetKey] ?: return@LaunchedEffect
@@ -591,6 +625,7 @@ private fun OriginalTabbedGridContent(
                     val itemKey = "${item.id}_$index"
                     val focusReq = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && index == 0) gridEntryFocus
                         else itemFocusRequesters.getOrPut(itemKey) { FocusRequester() }
+                    itemFocusRequesters[itemKey] = focusReq
                     val useDigitalDate = item.apiType == "movie"
                     val digitalDate by produceState<String?>(null, item.id, useDigitalDate) {
                         if (useDigitalDate) value = loadUsDigitalDate?.invoke(item.id)
@@ -607,6 +642,8 @@ private fun OriginalTabbedGridContent(
                         showYearOnly = true,
                         onFocused = { lastFocusedItemKey = itemKey },
                         onClick = {
+                            if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) onSaveFocusState(
+                                gridState.firstVisibleItemIndex, gridState.firstVisibleItemScrollOffset, itemKey)
                             HeroBackdropState.update(item.backdropUrl)
                             onNavigateToDetail(
                                 item.id,
@@ -692,7 +729,10 @@ private fun PreviewTabbedGridContent(
     isItemWatched: (MetaPreview) -> Boolean = { false },
     loadUsDigitalDate: (suspend (String) -> String?)? = null,
     onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
-    mode: TabbedGridPreview
+    mode: TabbedGridPreview,
+    restoreTrialPoster: Boolean = false,
+    skipTrialHeadingOnEntry: Boolean = false,
+    onTrialPosterRestored: () -> Unit = {}
 ) {
     val tabFocusRequesters = remember(uiState.tabs.size) { uiState.tabs.indices.map { FocusRequester() } }
     var gridHasFocus by remember { mutableStateOf(false) }
@@ -701,7 +741,7 @@ private fun PreviewTabbedGridContent(
     val posterEntry = remember(folder.id) { com.nuvio.tv.core.trial.TrialGridEntryPolicy() }
     val gridEntryFocus = remember { FocusRequester() }
     LaunchedEffect(folder.id, uiState.tabs.isNotEmpty()) {
-        if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && uiState.tabs.isNotEmpty()) {
+        if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && !skipTrialHeadingOnEntry && uiState.tabs.isNotEmpty()) {
             onSelectTab(0)
             withFrameNanos { }
             runCatching { tabFocusRequesters.first().requestFocus() }
@@ -855,13 +895,13 @@ private fun PreviewTabbedGridContent(
                 mutableStateOf(tabFocusState.focusedItemKey)
             }
             val gridState = rememberLazyGridState(
-                initialFirstVisibleItemIndex = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) 0 else tabFocusState.verticalScrollIndex,
-                initialFirstVisibleItemScrollOffset = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) 0 else tabFocusState.verticalScrollOffset
+                initialFirstVisibleItemIndex = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && !restoreTrialPoster) 0 else tabFocusState.verticalScrollIndex,
+                initialFirstVisibleItemScrollOffset = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && !restoreTrialPoster) 0 else tabFocusState.verticalScrollOffset
             )
 
             var focusedIndex by remember { mutableIntStateOf(-1) }
             var firstRow by remember { mutableIntStateOf(
-                if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) 0 else tabFocusState.verticalScrollIndex / mode.columns) }
+                if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && !restoreTrialPoster) 0 else tabFocusState.verticalScrollIndex / mode.columns) }
             LaunchedEffect(focusedIndex) {
                 if (focusedIndex >= 0) {
                     val target = mode.firstRow(focusedIndex / mode.columns, firstRow)
@@ -901,7 +941,21 @@ private fun PreviewTabbedGridContent(
 
             var focusRestored by remember { mutableStateOf(false) }
             LaunchedEffect(items, tabFocusState.hasSavedFocus, tabFocusState.focusedItemKey) {
-                if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) return@LaunchedEffect
+                if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) {
+                    if (!restoreTrialPoster) return@LaunchedEffect
+                    val targetKey = tabFocusState.focusedItemKey ?: return@LaunchedEffect
+                    val targetIndex = items.indices.firstOrNull { "${items[it].id}_$it" == targetKey }
+                        ?: return@LaunchedEffect
+                    firstRow = mode.firstRow(targetIndex / mode.columns, tabFocusState.verticalScrollIndex / mode.columns)
+                    gridState.scrollToItem(firstRow * mode.columns, tabFocusState.verticalScrollOffset)
+                    repeat(2) { withFrameNanos { } }
+                    val requester = itemFocusRequesters[targetKey] ?: return@LaunchedEffect
+                    if (runCatching { requester.requestFocus(androidx.compose.ui.focus.FocusDirection.Enter) }.getOrDefault(false)) {
+                        lastFocusedItemKey = targetKey
+                        onTrialPosterRestored()
+                    }
+                    return@LaunchedEffect
+                }
                 if (focusRestored) return@LaunchedEffect
                 val targetKey = tabFocusState.focusedItemKey ?: return@LaunchedEffect
                 if (!tabFocusState.hasSavedFocus) return@LaunchedEffect
@@ -979,6 +1033,7 @@ private fun PreviewTabbedGridContent(
                     val itemKey = "${item.id}_$index"
                     val focusReq = if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && index == 0) gridEntryFocus
                         else itemFocusRequesters.getOrPut(itemKey) { FocusRequester() }
+                    itemFocusRequesters[itemKey] = focusReq
                     val useDigitalDate = item.apiType == "movie"
                     val digitalDate by produceState<String?>(null, item.id, useDigitalDate) {
                         if (useDigitalDate) value = loadUsDigitalDate?.invoke(item.id)
@@ -999,6 +1054,8 @@ private fun PreviewTabbedGridContent(
                         showYearOnly = true,
                         onFocused = { lastFocusedItemKey = itemKey; focusedIndex = index },
                         onClick = {
+                            if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) onSaveFocusState(
+                                gridState.firstVisibleItemIndex, gridState.firstVisibleItemScrollOffset, itemKey)
                             HeroBackdropState.update(item.backdropUrl)
                             onNavigateToDetail(
                                 item.id,
