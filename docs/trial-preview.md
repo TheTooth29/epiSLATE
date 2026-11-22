@@ -1,3 +1,5 @@
+> Historical implementation notes. Current Trial candidate107117/build14 passed CI; TV checks pending. Published Trial remains107116/build13. Current notes: [Trial107117](releases/TRIAL-107117.md); public channel policy: [TRIAL_UPDATES.md](../TRIAL_UPDATES.md). Older “not built” and work/trial-activation references below describe the initial implementation, not current status.
+
 # Invitation preview (local prototype)
 
 This branch implements a separate invitation APK, not restrictions on beta 1.
