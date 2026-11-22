@@ -350,7 +350,7 @@ private fun TrialPinScreen(onCancel: () -> Unit, onUnlocked: () -> Unit) {
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             TrialButton(enabled = pin.length == 4, onClick = {
-                if (pin == "6969") onUnlocked() else { error = true; pin = "" }
+                if (pin == "2929") onUnlocked() else { error = true; pin = "" }
             }) { Text("Unlock Settings") }
             TrialButton(onClick = onCancel) { Text("Cancel") }
         }
