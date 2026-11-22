@@ -297,11 +297,33 @@ private fun TabbedGridContent(
     }
     // Save only a detail-navigation intent in this back-stack entry. A new folder visit has none.
     var pendingDetailTab by rememberSaveable(folder.id) { mutableIntStateOf(-1) }
-    val detailReturnTab = remember(folder.id) { pendingDetailTab }
-    val restoreTrialPoster = com.nuvio.tv.BuildConfig.TRIAL_ENABLED &&
-        pendingDetailTab >= 0 && detailReturnTab == uiState.selectedTabIndex
+    val returnPolicy = remember(folder.id) { com.nuvio.tv.core.trial.TrialFolderReturnPolicy(pendingDetailTab) }
+    var returnRevision by remember(folder.id) { mutableIntStateOf(0) }
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    var isResumed by remember(owner) { mutableStateOf(owner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) }
+    DisposableEffect(owner, returnPolicy) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            isResumed = owner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+            if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && event == androidx.lifecycle.Lifecycle.Event.ON_RESUME &&
+                returnPolicy.resumed()) returnRevision++
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer) }
+    }
+    val detailReturnTab = pendingDetailTab
+    val restoreTrialPoster = com.nuvio.tv.BuildConfig.TRIAL_ENABLED && isResumed &&
+        returnPolicy.restoringTab == uiState.selectedTabIndex
+    val selectTab: (Int) -> Unit = { index ->
+        if (!com.nuvio.tv.BuildConfig.TRIAL_ENABLED || returnPolicy.permitsHeading(index)) onSelectTab(index)
+    }
+    LaunchedEffect(returnRevision, uiState.tabs.size) {
+        if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) returnPolicy.restoringTab?.let { onSelectTab(it) }
+    }
     val detailNavigate: (String, String, String) -> Unit = { id, type, addon ->
-        if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) pendingDetailTab = uiState.selectedTabIndex
+        if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) {
+            pendingDetailTab = uiState.selectedTabIndex
+            returnPolicy.openDetail(uiState.selectedTabIndex)
+        }
         onNavigateToDetail(id, type, addon)
     }
     val store = remember(context) { TabbedGridPreviewStore.get(context) }
@@ -316,12 +338,13 @@ private fun TabbedGridContent(
         }
     }
     if (!tabRestored) return
+    if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED && returnPolicy.restoringTab != null && !restoreTrialPoster) return
     androidx.compose.runtime.SideEffect { store.saveSelectedTab(folder.id, mode, uiState.selectedTabIndex) }
     val tab = uiState.tabs.getOrNull(uiState.selectedTabIndex)
     val positionKey = remember(folder.id, tab, uiState.selectedTabIndex, mode) {
         org.json.JSONArray(listOf(folder.id, uiState.selectedTabIndex, tab?.label, tab?.source.toString(), mode.name)).toString()
     }
-    val saved = remember(positionKey) { store.position(positionKey) }
+    val saved = remember(positionKey, returnRevision) { store.position(positionKey) }
     androidx.compose.runtime.key(mode, folder.id) {
         val latestSave by rememberUpdatedState<(Int, Int, String?) -> Unit> { index, offset, focus ->
             store.save(positionKey, index, offset, focus)
@@ -331,18 +354,18 @@ private fun TabbedGridContent(
         if (mode == TabbedGridPreview.ORIGINAL) {
             OriginalTabbedGridContent(uiState, folder,
                 if (saved.hasSavedFocus) saved else tabFocusState,
-                onSelectTab, detailNavigate, save, onLoadMore, isItemWatched,
+                selectTab, detailNavigate, save, onLoadMore, isItemWatched,
                 loadUsDigitalDate, onItemLongPress,
                 restoreTrialPoster = restoreTrialPoster,
                 skipTrialHeadingOnEntry = detailReturnTab >= 0,
-                onTrialPosterRestored = { pendingDetailTab = -1 })
+                onTrialPosterRestored = { returnPolicy.completed(); pendingDetailTab = -1 })
         } else {
-            PreviewTabbedGridContent(uiState, folder, saved, onSelectTab, detailNavigate,
+            PreviewTabbedGridContent(uiState, folder, saved, selectTab, detailNavigate,
                 { index, offset, focus -> store.save(positionKey, index, offset, focus) },
                 onLoadMore, isItemWatched, loadUsDigitalDate, onItemLongPress, mode,
                 restoreTrialPoster = restoreTrialPoster,
                 skipTrialHeadingOnEntry = detailReturnTab >= 0,
-                onTrialPosterRestored = { pendingDetailTab = -1 })
+                onTrialPosterRestored = { returnPolicy.completed(); pendingDetailTab = -1 })
         }
     }
 }
@@ -547,7 +570,7 @@ private fun OriginalTabbedGridContent(
                 }
             }
 
-            LaunchedEffect(items, tabFocusState.hasSavedFocus, tabFocusState.focusedItemKey) {
+            LaunchedEffect(items, tabFocusState.hasSavedFocus, tabFocusState.focusedItemKey, restoreTrialPoster) {
                 if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) {
                     if (!restoreTrialPoster) return@LaunchedEffect
                     val targetKey = tabFocusState.focusedItemKey ?: return@LaunchedEffect
@@ -940,7 +963,7 @@ private fun PreviewTabbedGridContent(
             }
 
             var focusRestored by remember { mutableStateOf(false) }
-            LaunchedEffect(items, tabFocusState.hasSavedFocus, tabFocusState.focusedItemKey) {
+            LaunchedEffect(items, tabFocusState.hasSavedFocus, tabFocusState.focusedItemKey, restoreTrialPoster) {
                 if (com.nuvio.tv.BuildConfig.TRIAL_ENABLED) {
                     if (!restoreTrialPoster) return@LaunchedEffect
                     val targetKey = tabFocusState.focusedItemKey ?: return@LaunchedEffect

@@ -4,6 +4,29 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class TrialGridEntryPolicyTest {
+    @Test fun repeatedDetailVisitsRestoreTheLatestNonFirstHeading() {
+        val policy = TrialFolderReturnPolicy()
+        assertTrue(policy.permitsHeading(0))
+        policy.openDetail(0)
+        assertNull(policy.restoringTab)
+        assertTrue(policy.resumed())
+        policy.completed()
+        policy.openDetail(1)
+        assertTrue(policy.resumed())
+        assertEquals(1, policy.restoringTab)
+        assertFalse(policy.permitsHeading(0))
+        assertTrue(policy.permitsHeading(1))
+        policy.completed()
+        assertTrue(policy.permitsHeading(0))
+        assertFalse(policy.resumed())
+    }
+    @Test fun recreatedFolderRestoresSavedNonFirstTab() {
+        val policy = TrialFolderReturnPolicy(2)
+        assertEquals(2, policy.restoringTab)
+        assertFalse(policy.permitsHeading(0))
+        assertTrue(policy.permitsHeading(2))
+    }
+
     @Test fun detailReturnRetainsItsHeadingButNewCategoryStartsAtFirst() {
         assertEquals(2, TrialFolderFocusPolicy.initialTab(2, 4))
         assertEquals(0, TrialFolderFocusPolicy.initialTab(-1, 4))
