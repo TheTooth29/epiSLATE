@@ -88,3 +88,18 @@ Signed Test107117 / build82, exact source `a40290708626526833d575e332e5e7de06580
 Owner passed Two full rows, heading Down/Back/repeated Right, first-poster Down/Up, first-heading/top-row reentry, outlines/date clearance, details Back to collection heading and further Back to originating homepage tile, stream numbering with addon identity/badges/logos retained, playback/Home/SmartTube audio and paused reopen/resume, playback return to Continue Watching, sidebar removal/home branding, and Original selection/navigation followed by Two full rows. Fresh Test install signed in/synced and showed watched checkmarks. Crucially, a completed unwatched episode disappeared from Continue Watching without restart. No new pass is claimed for unreported slow-loading cases or previously saved switches; no regular-package in-place upgrade is claimed from this fresh Test install.
 
 Results recorded for review only. No merge, tag, regular release, push/build, Trial change or Downloader promotion was performed from this result handoff. Await the owner’s promotion decision.
+
+## Beta adoption queue — Trial detail Back restoration, 22 November 2026
+
+Tracking only; Beta implementation/build/merge/publication is not authorized by this entry. No existing entry for Trial commits 259c368/d6a0946 was found. This is a later refinement of the Test107117 adoption, not a request to reapply that completed batch.
+
+Behavior: returning from Details restores the selected catalog heading/tab, exact poster and scroll position across repeated visits. Fresh category entry must still start at the first heading/top row, with heading Down/Up/Back/Right navigation intact.
+
+Evidence reported by Builds: owner passed Trial17 (APK107118), exact source e3656c06f23d4cec90943b1ebe6eed4ac2d23b15, run https://github.com/TheTooth29/epiSLATE/actions/runs/45034410059. Checks included deep Details/Back under second/third Netflix headings, exact poster/row restoration, fresh first-heading/top-row entry and heading navigation. Focus changes include 259c368 and d6a0946. Accepted Trial batch merged into dedicated work/trial-release at 886ffb2061f690322695506af7b66b70e013e517; no regular dev merge. Final Trial107119 build/publication remains distinct from this tested-and-merged evidence.
+
+Beta applicability: shared collection navigation is applicable for review. Exclude Trial licensing, PIN, presets/catalog configuration and backend changes. Assess the minimal delta against the existing regular/Test policies before implementation. Required Beta validation after separately authorized implementation: repeated deep-poster Details/Back in multiple headings and tabs, exact heading/poster/scroll preservation; fresh category first-heading/top-row; Down/Up/Back/Right focus; ordinary Back to originating homepage collection; playback-return Continue Watching behavior; Original layout unchanged.
+
+
+## Test integration authorized — 24 November 2026
+
+Owner requested one Test build combining the remaining applicable Trial navigation correction and pending password-control fix. Implemented on work/test-trial-navigation-login, candidate107121. Updated layouts use the per-visit/resumed heading/poster/row restoration adapted from Trial259c368/d6a0946; Original renderer remains hash-identical. Password keyboard Done no longer submits; eye has explicit remote focus. Full CI and this port’s device validation remain pending. No regular merge/release or Trial distribution change.

@@ -28,3 +28,8 @@ Automated isolation policy tests cover official Test only, regular/Trial/store/l
 
 ## Approved Trial-style controls revision, Test107120
 Owner rejected107119visuals and approved the revised preview before explicitly requesting build. Uses actual Trial activation Material3OutlinedTextField (320dp, default outlined shape and dark scheme primary#8AB8ED), solid#101923background,26spheading/17sp24spbody,12dpheadinggap/20dpbodygap and44dpfield-to-actionclearance. Sign-in button matches Trial idle/focus/pressed/disabled palette; standard visibility icon is inside password field. Profile wordmark component/insets unchanged. No Trial runtime, licensing, backend or preset code is adopted. Preserve107119source4ed5011 as visual revert point. Local source/customization/hash checks pass; full Compose build and new TV approval pending. Preview is a layout rendering, not a native APK screenshot.
+
+
+## Test107121 integration — 24 November 2026
+
+Owner authorized one combined Test build. Includes local correction0088726: password IME Done hides the keyboard and focuses the independently focusable TV eye, Back-dismiss focus recovery and directional routing, and explicit Sign in submission. Styling/wordmark/backend/session behavior retained; package gate remains Test-only. Combined with Trial-derived collection navigation restoration in updated layouts. New native compilation/CI and TV keyboard/eye/sign-in checks remain pending; previous failed107120 device result is not reclassified as passed. See docs/releases/TEST-107121.md.
