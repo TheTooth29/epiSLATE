@@ -4,7 +4,9 @@ package com.nuvio.tv.ui.screens.account
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -60,6 +62,7 @@ internal fun TestEmailSignInScreen(
     val eyeFocus = remember { FocusRequester() }
     val signInFocus = remember { FocusRequester() }
     var passwordHasFocus by remember { mutableStateOf(false) }
+    var eyeHasFocus by remember { mutableStateOf(false) }
     var keyboardWasVisible by remember { mutableStateOf(false) }
     val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     val keyboard = LocalSoftwareKeyboardController.current
@@ -130,19 +133,28 @@ internal fun TestEmailSignInScreen(
                     visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         Button(onClick = { visible = !visible }, enabled = !state.isLoading,
-                            modifier = Modifier.size(48.dp).focusRequester(eyeFocus).focusProperties {
+                            modifier = Modifier.size(48.dp).focusRequester(eyeFocus)
+                                .onFocusChanged { eyeHasFocus = it.isFocused }.focusProperties {
                                 left = passwordFocus
                                 down = signInFocus
                                 up = emailFocus
                             },
-                            contentPadding = PaddingValues(12.dp),
+                            contentPadding = PaddingValues(8.dp),
+                            scale = ButtonDefaults.scale(focusedScale = 1f),
                             colors = ButtonDefaults.colors(
-                                containerColor = Color(0xFF243548), contentColor = Color(0xFFE4EDF7),
-                                focusedContainerColor = Color(0xFF8AB8ED), focusedContentColor = Color(0xFF101923)
+                                containerColor = Color.Transparent, contentColor = Color(0xFFCFD8E3),
+                                focusedContainerColor = Color.Transparent, focusedContentColor = Color(0xFF8AB8ED),
+                                pressedContainerColor = Color.Transparent, pressedContentColor = Color(0xFF8AB8ED),
+                                disabledContainerColor = Color.Transparent, disabledContentColor = Color(0xFF8090A2)
                             )) {
+                            // Keep the accessible 48dp target; only the inset icon gains a focus outline.
+                            Box(Modifier.size(32.dp).border(1.dp,
+                                if (eyeHasFocus) Color(0xFF8AB8ED).copy(alpha = 0.7f) else Color.Transparent,
+                                RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) {
                             Icon(if (visible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                 contentDescription = if (visible) "Hide password" else "Show password",
-                                modifier = Modifier.size(24.dp))
+                                modifier = Modifier.size(20.dp))
+                            }
                         }
                     },
                     modifier = Modifier.fillMaxWidth().focusRequester(passwordFocus)

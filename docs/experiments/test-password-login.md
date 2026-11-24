@@ -33,3 +33,8 @@ Owner rejected107119visuals and approved the revised preview before explicitly r
 ## Test107121 integration — 24 November 2026
 
 Owner authorized one combined Test build. Includes local correction0088726: password IME Done hides the keyboard and focuses the independently focusable TV eye, Back-dismiss focus recovery and directional routing, and explicit Sign in submission. Styling/wordmark/backend/session behavior retained; package gate remains Test-only. Combined with Trial-derived collection navigation restoration in updated layouts. New native compilation/CI and TV keyboard/eye/sign-in checks remain pending; previous failed107120 device result is not reclassified as passed. See docs/releases/TEST-107121.md.
+
+
+## Password-eye appearance followup — 24 November 2026
+
+Owner reports107121 eye works but rejects bulky filled circle. Authorized local styling change uses20dp standard icon, transparent idle/focused/pressed/disabled background and32dp inset rounded pale-blue focus outline, retaining48dp focus/touch target and explicit keyboard/remote routing. Focused button no longer expands. No new APK/build/push or device visual pass; existing107121 artifact is unchanged. Navigation and Original owner passes are recorded separately in Builds.
