@@ -103,3 +103,13 @@ Beta applicability: shared collection navigation is applicable for review. Exclu
 ## Test integration authorized — 24 November 2026
 
 Owner requested one Test build combining the remaining applicable Trial navigation correction and pending password-control fix. Implemented on work/test-trial-navigation-login, candidate107121. Updated layouts use the per-visit/resumed heading/poster/row restoration adapted from Trial259c368/d6a0946; Original renderer remains hash-identical. Password keyboard Done no longer submits; eye has explicit remote focus. Full CI and this port’s device validation remain pending. No regular merge/release or Trial distribution change.
+
+## Current status — owner-authorized regular dev merge, 24 November 2026
+
+This status supersedes the pending/queue wording above. Builds reports the owner explicitly authorized merging all latest changes. Regular dev was merged and pushed at ffd349a1ef6a500c20ec7d8055a84073adcb1c7e (previous dev 48ac7bc); its tree exactly matches tested source 5dadbc976f3d0939ef25a1a901c4bd63e0a0e6fc. Test107122/run87 CI passed: https://github.com/TheTooth29/epiSLATE/actions/runs/45447876762. Post-merge Original-renderer and personal customization checks passed.
+
+The shared Trial-derived Details/Back restoration is now implemented, device-tested and merged, not queued. Owner navigation/Original evidence is from Test107121; password eye appearance, keyboard Done without submit, reveal/hide without reopening keyboard, explicit Sign in, profile/addon/watched-history sync and signed-in reopen evidence is from Test107122. Do not describe earlier navigation passes as fresh107122 retests.
+
+Merge includes prior collection-layout/navigation adoption, Continue Watching completion fix, numbered streams and updated-layout Details/Back restoration. Login/eye changes remain Test-gated; no regular email-login promotion or backend switch. Trial licensing, PIN, presets and restrictions remain excluded.
+
+Merged is not published: no new APK, tag, release, Downloader or feed change is established by this merge. Published regular Beta4/107107 and Trial18/107119 remain unchanged per Builds handoff. Canonical inventory: ../RELEASES.md. Merge record: ../output/dev-merge-test107122.json. Tracking update only; no independent source work/build/publication authorized here.

@@ -57,5 +57,28 @@ V2 Signer: certificate MD5 digest: 346cdaf61533ad6cc11fb12635bd2f5b
                 upgrade.apk_info("aapt", "apksigner", "app.apk")
 
 
+class UpgradeContinuityTest(unittest.TestCase):
+    def check(self, **changes):
+        old = dict(package="com.nuvio.livetv", version_name="1.0.0-beta.4", version_code=107107,
+                   label="epiSLATE", signers=["ab" * 32])
+        new = dict(old, version_name="1.0.0-beta.5", version_code=107108)
+        new.update(changes)
+        return upgrade.upgrade_checks(old, new, "1.0.0-beta.4", 107107, "1.0.0-beta.5", 107108)
+
+    def test_expected_beta_upgrade_is_allowed(self):
+        self.assertTrue(all(self.check().values()))
+
+    def test_test_package_cannot_replace_regular(self):
+        self.assertFalse(self.check(package="com.nuvio.livetv.test")["regular_app_identity"])
+
+    def test_changed_signer_is_rejected(self):
+        self.assertFalse(self.check(signers=["cd" * 32])["same_signing_certificates"])
+
+    def test_wrong_or_equal_version_is_rejected(self):
+        checks = self.check(version_code=107107)
+        self.assertFalse(checks["higher_version_code"])
+        self.assertFalse(checks["expected_candidate_version"])
+
+
 if __name__ == "__main__":
     unittest.main()

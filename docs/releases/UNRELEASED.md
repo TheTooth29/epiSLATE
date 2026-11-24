@@ -35,5 +35,8 @@ Based on regular Beta 4. These changes passed the owner’s Test APK device sequ
 Keep the current full-version exit strategy. This update does not add Trial licensing, activation, PIN restrictions, notices, Trial exit/contact information or its button colours. It does not reset profiles, progress or watched history. No regular release, protected-branch merge, signing/package change or Downloader replacement is included in the implementation authorization.
 
 
-## Separate Test-only experiment
-Email/password login and the revised Trial-style sign-in screen remain a separate Test experiment, not an approved regular-release feature. See [Test107120 notes](TEST-107120.md). The107118 account/sync/session tests passed, but the redesigned107120screen still needs its own TV checks. Do not merge those statuses into the completed107117collection/ContinueWatching device pass. Current channel/version inventory is in the workspace RELEASES.md.
+## Beta 5 login promotion — 24 November 2026
+
+Owner explicitly approved enabling the tested email/password screen for regular Beta after the accepted dev merge. Release candidate branch work/release-beta-5 includes the new regular/Test package policy, approved login wording/wordmark/eye styling and explicit-submit behavior. Trial and custom-server handling remain unchanged. See [Beta5 candidate notes](1.0.0-beta.5.md). Previous Test-only restrictions and failed107120 evidence remain historical, not the current promotion decision. Regular-package compile/upgrade/device validation remains separate.
+
+The accepted browsing batch additionally restores exact heading/poster/row on Details→Back in updated layouts. Owner passed second/third-heading/repeated/index0, fresh entry and Original checks in Test107121; login/eye/keyboard/sync/reopen passed Test107122. No Beta5 device pass or publication claimed.

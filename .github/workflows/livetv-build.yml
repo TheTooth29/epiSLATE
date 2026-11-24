@@ -29,6 +29,7 @@ jobs:
           python3 scripts/check-personal-customizations.py
           python3 scripts/check-tabbed-grid-original.py
           python3 scripts/test_verify_android_upgrade.py
+          python3 -m unittest discover -s scripts/tests -p test_apk_build_record.py
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -130,20 +131,20 @@ jobs:
       - name: Test updater, watched badges and beta regressions
         run: |
           chmod +x gradlew
-          ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' --tests 'com.nuvio.tv.core.auth.AccountLocalDataResetServiceTest' --tests 'com.nuvio.tv.core.tracking.NuvioWatchedEpisodeProjectionTest' --tests 'com.nuvio.tv.data.repository.WatchProgressRepositoryProfileIsolationTest' --tests 'com.nuvio.tv.ui.screens.home.SeriesBadgeRefreshTest' --tests 'com.nuvio.tv.ui.screens.home.HomeEnrichmentRetryTest' --tests 'com.nuvio.tv.ui.screens.home.ContinueWatchingAiringRulesTest' --tests 'com.nuvio.tv.ui.screens.home.HomeRowVisibilityTest' --tests 'com.nuvio.tv.domain.model.CollectionOrderingTest' --tests 'com.nuvio.tv.core.image.CollectionCoverPreviewTest' --tests 'com.nuvio.tv.ui.screens.collection.GridReleaseDateTest' --tests 'com.nuvio.tv.domain.model.HomeDimmingSettingsTest' --tests 'com.nuvio.tv.ui.screens.player.AppBackgroundStopTest' --tests 'com.nuvio.tv.ui.screens.player.PlayerStartupPlaybackPolicyTest' --tests 'com.nuvio.tv.ui.screens.player.PlayerFirstFrameCodecRecoveryPolicyTest' --tests 'com.nuvio.tv.ui.screens.player.PlayerAudioFallbackPolicyTest' --tests 'com.nuvio.tv.ui.screens.collection.TabbedGridPreviewTest' --stacktrace -PlivetvTestBuild=${{ inputs.test_build == true }}
+          ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' --tests 'com.nuvio.tv.core.auth.AccountLocalDataResetServiceTest' --tests 'com.nuvio.tv.core.tracking.NuvioWatchedEpisodeProjectionTest' --tests 'com.nuvio.tv.data.repository.WatchProgressRepositoryProfileIsolationTest' --tests 'com.nuvio.tv.ui.screens.home.SeriesBadgeRefreshTest' --tests 'com.nuvio.tv.ui.screens.home.HomeEnrichmentRetryTest' --tests 'com.nuvio.tv.ui.screens.home.ContinueWatchingAiringRulesTest' --tests 'com.nuvio.tv.ui.screens.home.HomeRowVisibilityTest' --tests 'com.nuvio.tv.domain.model.CollectionOrderingTest' --tests 'com.nuvio.tv.core.image.CollectionCoverPreviewTest' --tests 'com.nuvio.tv.ui.screens.collection.GridReleaseDateTest' --tests 'com.nuvio.tv.domain.model.HomeDimmingSettingsTest' --tests 'com.nuvio.tv.ui.screens.player.AppBackgroundStopTest' --tests 'com.nuvio.tv.ui.screens.player.PlayerStartupPlaybackPolicyTest' --tests 'com.nuvio.tv.ui.screens.player.PlayerFirstFrameCodecRecoveryPolicyTest' --tests 'com.nuvio.tv.ui.screens.player.PlayerAudioFallbackPolicyTest' --tests 'com.nuvio.tv.ui.screens.collection.TabbedGridPreviewTest' --tests 'com.nuvio.tv.core.auth.AccountPasswordLoginPolicyTest' --tests 'com.nuvio.tv.ui.screens.collection.CatalogGridEntryPolicyTest' --tests 'com.nuvio.tv.ui.screens.collection.CatalogFolderReturnPolicyTest' --tests 'com.nuvio.tv.ui.screens.home.CatalogReturnPolicyTest' --tests 'com.nuvio.tv.ui.screens.home.ContinueWatchingCompletionTest' --stacktrace -PlivetvTestBuild=${{ inputs.test_build == true }}
 
       - name: Build signed APK after tests pass
         run: |
           chmod +x gradlew
           ./gradlew :app:assembleFullRelease --stacktrace -PlivetvTestBuild=${{ inputs.test_build == true }}
 
-      - name: Verify regular Beta 4 updates Beta 3 in place
+      - name: Verify regular Beta 5 updates Beta 4 in place
         if: ${{ !inputs.test_build }}
         run: |
           set -euo pipefail
-          previous="$RUNNER_TEMP/epiSLATE-beta-3.apk"
+          previous="$RUNNER_TEMP/epiSLATE-beta-4.apk"
           curl --fail --location --retry 3 --output "$previous" 'https://github.com/TheTooth29/epiSLATE/releases/download/downloader/epiSLATE.apk'
-          echo "e76f07f0e120ebb2f84c6e0da7875c3e1ea7ae2f49ef8ad0108608c9f2723b06  $previous" | sha256sum --check
+          echo "8d8f479e26e9ef2b43c3ea750174480313ae8f13633d686c830236c1692f4836  $previous" | sha256sum --check
           aapt=$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -V | tail -n 1)
           apksigner=$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -n 1)
           test -n "$aapt" && test -n "$apksigner"
@@ -151,17 +152,30 @@ jobs:
           universal=(app/build/outputs/apk/full/release/*universal*.apk)
           test "${#universal[@]}" -eq 1
           for apk in app/build/outputs/apk/full/release/*.apk; do
-            python3 scripts/verify-android-upgrade.py --aapt "$aapt" --apksigner "$apksigner" --previous "$previous" --candidate "$apk"
+            python3 scripts/verify-android-upgrade.py --aapt "$aapt" --apksigner "$apksigner" --previous "$previous" --candidate "$apk" --previous-version 1.0.0-beta.4 --previous-code 107107 --candidate-version 1.0.0-beta.5 --candidate-code 107108
           done
 
       - name: Collect APKs
+        if: ${{ inputs.test_build }}
         run: |
           mkdir -p out
           for apk in app/build/outputs/apk/full/release/*.apk; do
             filename=$(basename "$apk")
-            cp "$apk" "out/epiSLATE-1.0.0-beta.4-${filename#app-full-}"
+            cp "$apk" "out/epiSLATE-1.0.0-beta.5-${filename#app-full-}"
           done
           ls -la out
+
+      - name: Record verified regular Beta build and notes
+        if: ${{ !inputs.test_build }}
+        run: |
+          set -euo pipefail
+          aapt=$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -V | tail -n 1)
+          apksigner=$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -n 1)
+          shopt -s nullglob
+          universal=(app/build/outputs/apk/full/release/*universal*.apk)
+          test "${#universal[@]}" -eq 1
+          "$apksigner" verify --verbose --print-certs "${universal[0]}" > /tmp/epislate-regular-signing.txt
+          python3 scripts/record-apk-build.py --channel regular --apk "${universal[0]}" --aapt "$aapt" --signing-report /tmp/epislate-regular-signing.txt --notes docs/releases/1.0.0-beta.5.md --output out
 
       # Test build: the single APK as it is (no zip to open), named so it's easy to spot.
       - name: Name the test APK
@@ -250,8 +264,19 @@ jobs:
         if: ${{ !inputs.test_build }}
         uses: actions/upload-artifact@v7
         with:
-          path: out/*universal-release.apk
+          path: out/epiSLATE-1.0.0-beta.5-vc107108-*-universal.apk
           archive: false
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Upload regular build record and release notes
+        if: ${{ !inputs.test_build }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: epiSLATE-Beta5-build-record-${{ github.run_number }}
+          path: |
+            out/BUILD-RECORD.json
+            out/RELEASE-NOTES.md
           if-no-files-found: error
           retention-days: 90
 
@@ -265,10 +290,10 @@ jobs:
           make_latest: false
           body: |
             ## epiSLATE Beta
-            Version: **1.0.0-beta.4**
+            Version: **1.0.0-beta.5**
 
-            Fourth epiSLATE beta for Android TV and Google TV.
-            Adds background playback cleanup, configurable home dimming, default double-Back exit, refined header and Modern collection fading, corrected app icons, and simplified Appearance settings. Original Tabbed Grid is preserved in the regular app; comparison layouts remain Test-only. Based on owner-tested PR #28.
+            Fifth epiSLATE beta for Android TV and Google TV.
+            Adds approved email/password sign-in, collection layout choices and heading/poster return restoration, numbered streams and completed-episode Continue Watching correction. Original layout and existing saved settings remain available. Based on owner-tested Test107121/107122; regular-package upgrade validation is separate.
 
             Download the **universal** APK below if you are unsure which version to install.
             This beta has no trial expiration or activation requirement.

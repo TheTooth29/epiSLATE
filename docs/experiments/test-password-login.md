@@ -38,3 +38,8 @@ Owner authorized one combined Test build. Includes local correction0088726: pass
 ## Password-eye appearance followup — 24 November 2026
 
 Owner reports107121 eye works but rejects bulky filled circle. Authorized local styling change uses20dp standard icon, transparent idle/focused/pressed/disabled background and32dp inset rounded pale-blue focus outline, retaining48dp focus/touch target and explicit keyboard/remote routing. Focused button no longer expands. No new APK/build/push or device visual pass; existing107121 artifact is unchanged. Navigation and Original owner passes are recorded separately in Builds.
+
+
+## Owner-authorized regular Beta promotion — 24 November 2026
+
+After107122 login/eye/keyboard/sync/reopen passed, owner explicitly requested enabling the new login for Beta. work/release-beta-5 enables only exact regular/Test package IDs on the official configuration, retains Trial exclusion and custom-server capability behavior, and renames shared policy/screen to reflect production scope. Beta5/107108 compilation, upgrade identity/signing and device checks remain separate. No backend/session reset, release publication or Downloader change.
