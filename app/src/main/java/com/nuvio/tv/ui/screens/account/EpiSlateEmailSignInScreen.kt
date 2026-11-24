@@ -45,9 +45,9 @@ import com.nuvio.tv.ui.components.EpiSlateProfileWordmark
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import com.nuvio.tv.ui.theme.NuvioTheme
 
-/** Hosted-account experiment only; the caller gates by exact Test package. */
+/** Official-account sign-in; the caller gates the approved regular/Test packages. */
 @Composable
-internal fun TestEmailSignInScreen(
+internal fun EpiSlateEmailSignInScreen(
     onBack: () -> Unit,
     onContinue: (() -> Unit)?,
     viewModel: AccountViewModel
@@ -180,7 +180,7 @@ internal fun TestEmailSignInScreen(
                     Text(if (state.isLoading) "Signing in..." else "Sign in", fontSize = 17.sp)
                 }
                 state.error?.takeIf { it.isNotBlank() }?.let {
-                    Text(com.nuvio.tv.core.auth.TestPasswordLoginPolicy.errorMessage(it), color = Color(0xFFFFB4AB), fontSize = 16.sp,
+                    Text(com.nuvio.tv.core.auth.AccountPasswordLoginPolicy.errorMessage(it), color = Color(0xFFFFB4AB), fontSize = 16.sp,
                         textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                 }
             }

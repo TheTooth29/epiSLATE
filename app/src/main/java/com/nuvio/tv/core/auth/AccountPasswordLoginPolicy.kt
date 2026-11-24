@@ -1,10 +1,10 @@
 package com.nuvio.tv.core.auth
 
-/** Alternate official-server login experiment, unavailable in regular and Trial apps. */
-internal object TestPasswordLoginPolicy {
+/** Approved official-account sign-in for regular epiSLATE and Test; Trial keeps its own flow. */
+internal object AccountPasswordLoginPolicy {
     fun available(packageName: String, isCustomServer: Boolean): Boolean =
-        packageName == "com.nuvio.livetv.test" && !isCustomServer
-    /** Never display raw provider names or response bodies on the Test sign-in screen. */
+        (packageName == "com.nuvio.livetv" || packageName == "com.nuvio.livetv.test") && !isCustomServer
+    /** Never display raw provider names or response bodies on the sign-in screen. */
     fun errorMessage(error: String): String = when {
         error.contains("invalid", true) || error.contains("credentials", true) ->
             "Email or password wasn't accepted.  Please try again."

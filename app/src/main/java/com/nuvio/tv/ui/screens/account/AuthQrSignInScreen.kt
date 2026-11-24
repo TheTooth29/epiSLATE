@@ -81,8 +81,8 @@ fun AuthQrSignInScreen(
     onContinue: (() -> Unit)? = null,
     viewModel: AccountViewModel = hiltViewModel()
 ) {
-    if (viewModel.offersTestEmailPasswordLogin) {
-        TestEmailSignInScreen(onBackPress, onContinue, viewModel)
+    if (viewModel.offersEpiSlateEmailPasswordLogin) {
+        EpiSlateEmailSignInScreen(onBackPress, onContinue, viewModel)
         return
     }
     val uiState by viewModel.uiState.collectAsState()
@@ -90,7 +90,7 @@ fun AuthQrSignInScreen(
     val isSignedIn = fullAccount != null
     val isOnboardingMode = onContinue != null
     var testEmailLogin by rememberSaveable { mutableStateOf(false) }
-    val canSwitchLogin = viewModel.offersTestEmailPasswordLogin
+    val canSwitchLogin = viewModel.offersEpiSlateEmailPasswordLogin
     val useEmailLogin = viewModel.usesEmailPasswordLogin || (canSwitchLogin && testEmailLogin)
     val useQrLogin = !useEmailLogin
     val isApproved = remember(uiState.qrLoginStatus) {
@@ -211,7 +211,7 @@ fun AuthQrSignInScreen(
                 isOnboardingMode = isOnboardingMode,
                 useEmailLogin = useEmailLogin,
                 onSwitchLogin = if (canSwitchLogin && !isSignedIn) ({
-                    viewModel.switchTestLoginMethod()
+                    viewModel.switchEpiSlateLoginMethod()
                     testEmailLogin = !testEmailLogin
                 }) else null,
                 remainingMillis = remainingMillis,
