@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -73,6 +74,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Tab
 import androidx.tv.material3.TabRow
+import androidx.tv.material3.TabDefaults
+import androidx.tv.material3.TabRowDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.nuvio.tv.domain.model.FolderViewMode
@@ -287,28 +290,62 @@ private fun TabbedGridContent(
     onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
-    if (!TabbedGridPreviewStore.isTestPackage(context.packageName) || uiState.viewMode != FolderViewMode.TABBED_GRID) {
+    if (!TabbedGridPreviewStore.supportsLayouts(context.packageName) || uiState.viewMode != FolderViewMode.TABBED_GRID) {
         OriginalTabbedGridContent(uiState, folder, tabFocusState, onSelectTab, onNavigateToDetail,
             onSaveFocusState, onLoadMore, isItemWatched, loadUsDigitalDate, onItemLongPress)
         return
     }
     val store = remember(context) { TabbedGridPreviewStore.get(context) }
     val mode by store.mode.collectAsStateWithLifecycle()
+    val enhancedReturn = mode != TabbedGridPreview.ORIGINAL
+    // Save only a detail-navigation intent in this back-stack entry. A new folder visit has none.
+    var pendingDetailTab by rememberSaveable(folder.id, mode) { mutableIntStateOf(-1) }
+    val returnPolicy = remember(folder.id, mode) { CatalogFolderReturnPolicy(pendingDetailTab) }
+    var returnRevision by remember(folder.id) { mutableIntStateOf(0) }
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    var isResumed by remember(owner) { mutableStateOf(owner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) }
+    DisposableEffect(owner, returnPolicy, enhancedReturn) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            isResumed = owner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+            if (enhancedReturn && event == androidx.lifecycle.Lifecycle.Event.ON_RESUME &&
+                returnPolicy.resumed()) returnRevision++
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer) }
+    }
+    val detailReturnTab = pendingDetailTab
+    val restoreCatalogPoster = enhancedReturn && isResumed &&
+        returnPolicy.restoringTab == uiState.selectedTabIndex
+    val selectTab: (Int) -> Unit = { index ->
+        if (!enhancedReturn || returnPolicy.permitsHeading(index)) onSelectTab(index)
+    }
+    LaunchedEffect(returnRevision, uiState.tabs.size) {
+        if (enhancedReturn) returnPolicy.restoringTab?.let { onSelectTab(it) }
+    }
+    val detailNavigate: (String, String, String) -> Unit = { id, type, addon ->
+        if (enhancedReturn) {
+            pendingDetailTab = uiState.selectedTabIndex
+            returnPolicy.openDetail(uiState.selectedTabIndex)
+        }
+        onNavigateToDetail(id, type, addon)
+    }
     var tabRestored by remember(folder.id, mode) { mutableStateOf(false) }
     LaunchedEffect(folder.id, mode, uiState.tabs.size) {
         if (!tabRestored && uiState.tabs.isNotEmpty()) {
-            onSelectTab(store.selectedTab(folder.id, mode, uiState.selectedTabIndex)
-                .coerceIn(uiState.tabs.indices))
+            onSelectTab(if (enhancedReturn)
+                CatalogFolderFocusPolicy.initialTab(detailReturnTab, uiState.tabs.size) else
+                store.selectedTab(folder.id, mode, uiState.selectedTabIndex).coerceIn(uiState.tabs.indices))
             tabRestored = true
         }
     }
     if (!tabRestored) return
+    if (enhancedReturn && returnPolicy.restoringTab != null && !restoreCatalogPoster) return
     androidx.compose.runtime.SideEffect { store.saveSelectedTab(folder.id, mode, uiState.selectedTabIndex) }
     val tab = uiState.tabs.getOrNull(uiState.selectedTabIndex)
     val positionKey = remember(folder.id, tab, uiState.selectedTabIndex, mode) {
         org.json.JSONArray(listOf(folder.id, uiState.selectedTabIndex, tab?.label, tab?.source.toString(), mode.name)).toString()
     }
-    val saved = remember(positionKey) { store.position(positionKey) }
+    val saved = remember(positionKey, returnRevision) { store.position(positionKey) }
     androidx.compose.runtime.key(mode, folder.id) {
         val latestSave by rememberUpdatedState<(Int, Int, String?) -> Unit> { index, offset, focus ->
             store.save(positionKey, index, offset, focus)
@@ -321,9 +358,12 @@ private fun TabbedGridContent(
                 onSelectTab, onNavigateToDetail, save, onLoadMore, isItemWatched,
                 loadUsDigitalDate, onItemLongPress)
         } else {
-            PreviewTabbedGridContent(uiState, folder, saved, onSelectTab, onNavigateToDetail,
+            PreviewTabbedGridContent(uiState, folder, saved, selectTab, detailNavigate,
                 { index, offset, focus -> store.save(positionKey, index, offset, focus) },
-                onLoadMore, isItemWatched, loadUsDigitalDate, onItemLongPress, mode)
+                onLoadMore, isItemWatched, loadUsDigitalDate, onItemLongPress, mode,
+                restoreCatalogPoster = restoreCatalogPoster,
+                skipHeadingOnEntry = detailReturnTab >= 0,
+                onCatalogPosterRestored = { returnPolicy.completed(); pendingDetailTab = -1 })
         }
     }
 }
@@ -636,14 +676,28 @@ private fun PreviewTabbedGridContent(
     isItemWatched: (MetaPreview) -> Boolean = { false },
     loadUsDigitalDate: (suspend (String) -> String?)? = null,
     onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
-    mode: TabbedGridPreview
+    mode: TabbedGridPreview,
+    restoreCatalogPoster: Boolean = false,
+    skipHeadingOnEntry: Boolean = false,
+    onCatalogPosterRestored: () -> Unit = {}
 ) {
+    val enhancedHeadingNavigation = uiState.viewMode == FolderViewMode.TABBED_GRID
     val tabFocusRequesters = remember(uiState.tabs.size) { uiState.tabs.indices.map { FocusRequester() } }
     var gridHasFocus by remember { mutableStateOf(false) }
     var gridScrollToTopTrigger by remember { mutableIntStateOf(0) }
+    var firstPosterRequest by remember { mutableIntStateOf(0) }
+    val posterEntry = remember(folder.id) { CatalogGridEntryPolicy() }
+    val gridEntryFocus = remember { FocusRequester() }
+    LaunchedEffect(folder.id, uiState.tabs.isNotEmpty()) {
+        if (enhancedHeadingNavigation && !skipHeadingOnEntry && uiState.tabs.isNotEmpty()) {
+            onSelectTab(0)
+            withFrameNanos { }
+            runCatching { tabFocusRequesters.first().requestFocus() }
+        }
+    }
 
     // Grid Back: focus on grid -> move focus to active tab (grid stays scrolled).
-    BackHandler(enabled = gridHasFocus && uiState.tabs.size > 1) {
+    BackHandler(enabled = gridHasFocus && (uiState.tabs.size > 1 || (enhancedHeadingNavigation && uiState.tabs.isNotEmpty()))) {
         tabFocusRequesters.getOrNull(uiState.selectedTabIndex)?.let { runCatching { it.requestFocus() } }
     }
 
@@ -665,9 +719,17 @@ private fun PreviewTabbedGridContent(
             modifier = Modifier.widthIn(max = 300.dp)
         )
 
-        if (uiState.tabs.size > 1) {
+        if (uiState.tabs.size > 1 || (enhancedHeadingNavigation && uiState.tabs.isNotEmpty())) {
             TabRow(
                 selectedTabIndex = uiState.selectedTabIndex,
+                indicator = { positions, focused ->
+                    positions.getOrNull(uiState.selectedTabIndex)?.let { position ->
+                        TabRowDefaults.PillIndicator(position, focused,
+                            activeColor = if (enhancedHeadingNavigation)
+                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
+                                else MaterialTheme.colorScheme.onSurface)
+                    }
+                },
                 modifier = Modifier
                     .focusRestorer {
                         tabFocusRequesters.getOrNull(uiState.selectedTabIndex) ?: FocusRequester.Default
@@ -675,14 +737,36 @@ private fun PreviewTabbedGridContent(
             ) {
                 uiState.tabs.forEachIndexed { index, tab ->
                     Tab(
+                        colors = if (enhancedHeadingNavigation) TabDefaults.pillIndicatorTabColors(
+                            focusedContentColor = Color.White, focusedSelectedContentColor = Color.White,
+                            selectedContentColor = NuvioTheme.colors.TextSecondary
+                        ) else TabDefaults.pillIndicatorTabColors(),
                         selected = index == uiState.selectedTabIndex,
-                        onFocus = { onSelectTab(index) },
+                        onFocus = {
+                            if (enhancedHeadingNavigation) posterEntry.cancel()
+                            onSelectTab(index)
+                        },
                         onClick = {
                             onSelectTab(index)
                             gridScrollToTopTrigger++
                         },
                         modifier = if (index < tabFocusRequesters.size) {
                             Modifier.focusRequester(tabFocusRequesters[index])
+                                .then(if (enhancedHeadingNavigation) Modifier.focusProperties {
+                                    left = tabFocusRequesters.getOrNull(index - 1) ?: FocusRequester.Cancel
+                                    right = tabFocusRequesters.getOrNull(index + 1) ?: FocusRequester.Cancel
+                                    up = FocusRequester.Cancel
+                                } else Modifier)
+                                .onPreviewKeyEvent { event ->
+                                if (enhancedHeadingNavigation &&
+                                    event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
+                                    if (event.type == KeyEventType.KeyDown) {
+                                        posterEntry.request(index)
+                                        firstPosterRequest++
+                                    }
+                                    true
+                                } else false
+                            }
                         } else Modifier
                     ) {
                         Column(
@@ -759,12 +843,13 @@ private fun PreviewTabbedGridContent(
                 mutableStateOf(tabFocusState.focusedItemKey)
             }
             val gridState = rememberLazyGridState(
-                initialFirstVisibleItemIndex = tabFocusState.verticalScrollIndex,
-                initialFirstVisibleItemScrollOffset = tabFocusState.verticalScrollOffset
+                initialFirstVisibleItemIndex = if (enhancedHeadingNavigation && !restoreCatalogPoster) 0 else tabFocusState.verticalScrollIndex,
+                initialFirstVisibleItemScrollOffset = if (enhancedHeadingNavigation && !restoreCatalogPoster) 0 else tabFocusState.verticalScrollOffset
             )
 
             var focusedIndex by remember { mutableIntStateOf(-1) }
-            var firstRow by remember { mutableIntStateOf(tabFocusState.verticalScrollIndex / mode.columns) }
+            var firstRow by remember { mutableIntStateOf(
+                if (enhancedHeadingNavigation && !restoreCatalogPoster) 0 else tabFocusState.verticalScrollIndex / mode.columns) }
             LaunchedEffect(focusedIndex) {
                 if (focusedIndex >= 0) {
                     val target = mode.firstRow(focusedIndex / mode.columns, firstRow)
@@ -789,6 +874,7 @@ private fun PreviewTabbedGridContent(
             }
 
             LaunchedEffect(tabFocusState.verticalScrollIndex, tabFocusState.verticalScrollOffset) {
+                if (enhancedHeadingNavigation) return@LaunchedEffect
                 val targetIndex = tabFocusState.verticalScrollIndex
                 val targetOffset = tabFocusState.verticalScrollOffset
                 if (gridState.firstVisibleItemIndex == targetIndex &&
@@ -802,7 +888,22 @@ private fun PreviewTabbedGridContent(
             }
 
             var focusRestored by remember { mutableStateOf(false) }
-            LaunchedEffect(items, tabFocusState.hasSavedFocus, tabFocusState.focusedItemKey) {
+            LaunchedEffect(items, tabFocusState.hasSavedFocus, tabFocusState.focusedItemKey, restoreCatalogPoster) {
+                if (enhancedHeadingNavigation) {
+                    if (!restoreCatalogPoster) return@LaunchedEffect
+                    val targetKey = tabFocusState.focusedItemKey ?: return@LaunchedEffect
+                    val targetIndex = items.indices.firstOrNull { "${items[it].id}_$it" == targetKey }
+                        ?: return@LaunchedEffect
+                    firstRow = mode.firstRow(targetIndex / mode.columns, tabFocusState.verticalScrollIndex / mode.columns)
+                    gridState.scrollToItem(firstRow * mode.columns, tabFocusState.verticalScrollOffset)
+                    repeat(2) { withFrameNanos { } }
+                    val requester = itemFocusRequesters[targetKey] ?: return@LaunchedEffect
+                    if (runCatching { requester.requestFocus(androidx.compose.ui.focus.FocusDirection.Enter) }.getOrDefault(false)) {
+                        lastFocusedItemKey = targetKey
+                        onCatalogPosterRestored()
+                    }
+                    return@LaunchedEffect
+                }
                 if (focusRestored) return@LaunchedEffect
                 val targetKey = tabFocusState.focusedItemKey ?: return@LaunchedEffect
                 if (!tabFocusState.hasSavedFocus) return@LaunchedEffect
@@ -814,6 +915,16 @@ private fun PreviewTabbedGridContent(
                 }
             }
 
+            LaunchedEffect(firstPosterRequest, items.size) {
+                if (enhancedHeadingNavigation && posterEntry.targets(uiState.selectedTabIndex) && items.isNotEmpty()) {
+                    gridState.scrollToItem(0)
+                    repeat(2) { withFrameNanos { } }
+                    if (posterEntry.targets(uiState.selectedTabIndex) &&
+                        runCatching { gridEntryFocus.requestFocus(androidx.compose.ui.focus.FocusDirection.Enter) }.getOrDefault(false)) {
+                        posterEntry.completed(uiState.selectedTabIndex)
+                    }
+                }
+            }
             val catalogRow = currentTab.catalogRow
             LaunchedEffect(gridState, items.size) {
                 snapshotFlow {
@@ -850,9 +961,9 @@ private fun PreviewTabbedGridContent(
                     .fillMaxWidth()
                     .align(Alignment.Center)
                     .onFocusChanged { gridHasFocus = it.hasFocus }
-                    .focusRestorer {
+                    .then(if (enhancedHeadingNavigation) Modifier else Modifier.focusRestorer {
                         lastFocusedItemKey?.let { itemFocusRequesters[it] } ?: FocusRequester.Default
-                    }
+                    })
                     .dpadRepeatThrottle(),
                 contentPadding = PaddingValues(
                     start = NuvioTheme.spacing.xxxl,
@@ -868,13 +979,16 @@ private fun PreviewTabbedGridContent(
                     key = { index, item -> "${item.id}_$index" }
                 ) { index, item ->
                     val itemKey = "${item.id}_$index"
-                    val focusReq = itemFocusRequesters.getOrPut(itemKey) { FocusRequester() }
+                    val focusReq = if (enhancedHeadingNavigation && index == 0) gridEntryFocus
+                        else itemFocusRequesters.getOrPut(itemKey) { FocusRequester() }
+                    itemFocusRequesters[itemKey] = focusReq
                     val useDigitalDate = item.apiType == "movie"
                     val digitalDate by produceState<String?>(null, item.id, useDigitalDate) {
                         if (useDigitalDate) value = loadUsDigitalDate?.invoke(item.id)
                     }
                     GridContentCard(
                         modifier = Modifier.height(rowHeight),
+                        showNeutralOutline = enhancedHeadingNavigation,
                         item = item,
                         yearLabelOverride = (if (item.apiType == "series") formatGridReleaseDate(item.released) else digitalDate)
                             ?.uppercase(java.util.Locale.US),
@@ -882,10 +996,14 @@ private fun PreviewTabbedGridContent(
                         releaseLabelTopPadding = dateTopPadding,
                         posterCardStyle = posterCardStyle,
                         focusRequester = focusReq,
+                        upFocusRequester = if (enhancedHeadingNavigation && index < mode.columns)
+                            tabFocusRequesters.getOrNull(uiState.selectedTabIndex) else null,
                         isWatched = isItemWatched(item),
                         showYearOnly = true,
                         onFocused = { lastFocusedItemKey = itemKey; focusedIndex = index },
                         onClick = {
+                            if (enhancedHeadingNavigation) onSaveFocusState(
+                                gridState.firstVisibleItemIndex, gridState.firstVisibleItemScrollOffset, itemKey)
                             HeroBackdropState.update(item.backdropUrl)
                             onNavigateToDetail(
                                 item.id,

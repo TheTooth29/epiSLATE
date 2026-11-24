@@ -12,6 +12,8 @@ import com.nuvio.tv.domain.model.ContinueWatchingSortMode
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Video
+import com.nuvio.tv.domain.model.WatchedMutationKey
+import com.nuvio.tv.domain.model.mutationKey
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.model.normalizeLanguageCode
 import com.nuvio.tv.domain.model.countryToLanguageCode
@@ -70,7 +72,7 @@ private data class ContinueWatchingSettingsSnapshot(
     val showUnairedNextUp: Boolean,
     val nextUpFromFurthestEpisode: Boolean,
     val continueWatchingSortMode: ContinueWatchingSortMode,
-    val watchedItemsVersion: Int,  // triggers re-evaluation when watched items change
+    val watchedItemsVersion: Set<WatchedMutationKey>,  // identity changes matter even when the count is unchanged
     val hasLoadedRemoteProgress: Boolean
 )
 
@@ -300,7 +302,7 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
             ) { daysCap, dismissedNextUp, showUnairedNextUp, nextUpFromFurthest, sortMode ->
                 arrayOf(daysCap, dismissedNextUp, showUnairedNextUp, nextUpFromFurthest, sortMode)
             },
-            watchProgressRepository.watchedItems.map { it.size },
+            watchProgressRepository.watchedItems.map { items -> items.map { it.mutationKey() }.toSet() },
             cwPipelineRefreshTrigger
         ) { progressSnapshot, settingsSnapshot, watchedItemsSize, _ ->
             val (items, nextUpSeeds, hasLoadedRemoteProgress) = progressSnapshot
@@ -327,6 +329,9 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
             try {
                 debug.markPhase("filter-snapshot")
                 val cycleStartMs = SystemClock.elapsedRealtime()
+                val completedEpisodeKeys = snapshot.watchedItemsVersion + snapshot.items
+                    .filter { it.isCompleted() && it.season != null && it.episode != null }
+                    .map { WatchedMutationKey(it.contentId, it.season, it.episode) }
                 val useTrackingProvider = watchProgressRepository.hasActiveTrackingProgressProvider()
                 val items = snapshot.items
                 val nextUpSeeds = snapshot.nextUpSeeds
@@ -569,9 +574,13 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                             mode = continueWatchingSortMode
                         )
                     )
-                    val (mainItems, upcomingOnly) = splitUpcomingItems(initialItems, continueWatchingSortMode)
+                    val (mainItems, upcomingOnly) = splitUpcomingItems(withoutWatchedNextUp(initialItems, completedEpisodeKeys), continueWatchingSortMode)
 
-                    _uiState.update { state ->
+                    _uiState.update { rawState ->
+                        val state = rawState.copy(
+                            continueWatchingItems = withoutWatchedNextUp(rawState.continueWatchingItems, completedEpisodeKeys),
+                            upcomingItems = withoutWatchedNextUp(rawState.upcomingItems, completedEpisodeKeys)
+                        )
                         if (mainItems.isEmpty() && upcomingOnly.isEmpty() && state.continueWatchingItems.isNotEmpty()) {
                             state
                         } else if (state.continueWatchingItems == mainItems && state.upcomingItems == upcomingOnly) {
@@ -659,8 +668,12 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                                         mode = continueWatchingSortMode
                                     )
                                 )
-                                val (partialMain, partialUpcoming) = splitUpcomingItems(partialItems, continueWatchingSortMode)
-                                _uiState.update { state ->
+                                val (partialMain, partialUpcoming) = splitUpcomingItems(withoutWatchedNextUp(partialItems, completedEpisodeKeys), continueWatchingSortMode)
+                                _uiState.update { rawState ->
+                                    val state = rawState.copy(
+                                        continueWatchingItems = withoutWatchedNextUp(rawState.continueWatchingItems, completedEpisodeKeys),
+                                        upcomingItems = withoutWatchedNextUp(rawState.upcomingItems, completedEpisodeKeys)
+                                    )
                                     if (state.continueWatchingItems == partialMain && state.upcomingItems == partialUpcoming) {
                                         state
                                     } else if (!snapshot.hasLoadedRemoteProgress && state.continueWatchingItems.isNotEmpty()) {
@@ -1003,10 +1016,13 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                         mode = continueWatchingSortMode
                     )
                 )
-                val (normalMain, normalUpcoming) = splitUpcomingItems(normalItems, continueWatchingSortMode)
+                val (normalMain, normalUpcoming) = splitUpcomingItems(withoutWatchedNextUp(normalItems, completedEpisodeKeys), continueWatchingSortMode)
 
-                _uiState.update { state ->
-                    // Don't overwrite cached CW with empty data while sources are still loading.
+                _uiState.update { rawState ->
+                    val state = rawState.copy(
+                        continueWatchingItems = withoutWatchedNextUp(rawState.continueWatchingItems, completedEpisodeKeys),
+                        upcomingItems = withoutWatchedNextUp(rawState.upcomingItems, completedEpisodeKeys)
+                    )
                     // Once remote progress is confirmed loaded (Nuvio Sync completed or Trakt
                     // responded), trust the empty result — items may have been deleted remotely.
                     val shouldProtectCache = normalMain.isEmpty() && normalUpcoming.isEmpty() &&
@@ -1585,7 +1601,14 @@ private suspend fun HomeViewModel.enrichVisibleContinueWatchingItems(
         }
     }
 
-    _uiState.update { state ->
+    val completedEpisodeKeys = watchProgressRepository.watchedItems.first().map { it.mutationKey() }.toSet() +
+        watchProgressRepository.allProgress.first().filter { it.isCompleted() && it.season != null && it.episode != null }
+            .map { WatchedMutationKey(it.contentId, it.season, it.episode) }
+    _uiState.update { rawState ->
+        val state = rawState.copy(
+            continueWatchingItems = withoutWatchedNextUp(rawState.continueWatchingItems, completedEpisodeKeys),
+            upcomingItems = withoutWatchedNextUp(rawState.upcomingItems, completedEpisodeKeys)
+        )
         val mergedEnrichedItems = mergeConcurrentContinueWatchingEnrichment(
             currentItems = state.continueWatchingItems + state.upcomingItems,
             originalItems = finalItems,
@@ -1596,7 +1619,7 @@ private suspend fun HomeViewModel.enrichVisibleContinueWatchingItems(
             continueWatchingSortMode
         )
         val (enrichedMain, enrichedUpcoming) = splitUpcomingItems(
-            sortedMergedItems,
+            withoutWatchedNextUp(sortedMergedItems, completedEpisodeKeys),
             continueWatchingSortMode
         )
         if (state.continueWatchingItems == enrichedMain && state.upcomingItems == enrichedUpcoming) {

@@ -1,6 +1,8 @@
-# Next-release feature set
+# Next-release feature set — historical record
 
-Base: tested Beta 3, `c5b155f9ca54b23116742caf2dd92878b7cd9872`.
+Current regular baseline is **Beta4**. Current user-facing changes: [unreleased notes](docs/releases/UNRELEASED.md). Current Test-only sign-in work: [Test107120 notes](docs/releases/TEST-107120.md). Channel/version/build inventory: [project release index](../RELEASES.md). Older pending wording below is retained as dated implementation history, not current release status.
+
+Historical base: tested Beta 3, `c5b155f9ca54b23116742caf2dd92878b7cd9872`.
 The regular Beta 3 branch/APK and protected dev baseline are not replaced by this work.
 
 ## Changes
@@ -68,3 +70,36 @@ Validation: Full Debug app and test compilation passed; all five focused JUnit t
 Owner authorized implementation and a new Test APK after reviewing measured proposals. Removed Three full rows; an existing saved selection falls back to Original. Two full rows and Page by page retain six columns and identical geometry, using the actual date-line height plus 10dp padding instead of the former 48dp reserve. Keep existing 48dp horizontal margins, 12dp vertical insets and 16dp spacing. Centered uses five columns and the largest proportional cards fitting the width/height limits; its grid viewport shows one full row, with faint directional arrows outside it and no neighbouring rows. Dates are lowered only in experimental layouts; Original and other GridContentCard callers retain the original 2dp default. Selection and per-choice positions remain separate; no saved-position clearing. Frozen checkpoints for original source and tested build79 are retained.
 
 Owner's Test79 results: Two full rows initial display and one-row edge scrolling passed; detail -> Back restored the selected tab/focused item and two complete rows; Three full rows initial/edge scrolling passed before its removal request; Page by page forward/back two-row movement passed. No Centered result was reported. These results do not validate the new sizing or arrows. Updated validation: Full Debug app/test compilation and all seven focused JUnit tests passed, with zero failures/errors/skips. Coverage includes removed-choice fallback, equal Two full rows/Page geometry, centered portrait/landscape sizing and arrow clearance, package gating and scrolling policies. Original-renderer hash, personal customization and whitespace checks passed. New TV sizing, date clearance and arrows await the requested Test APK/device check. Build/install/device checks continue in Builds, installs & testing, one check at a time. No stable merge, regular release, package/signing migration, trial change or Downloader replacement is authorized.
+
+## Regular Beta 4 follow-up — approved selection, not published
+
+User-facing draft: [Unreleased notes](docs/releases/UNRELEASED.md). Base `f93a8e8d1450636afafb069a787602ecbb7d5ed9`, checkpoint `backup/beta4-before-trial-adoption-2026-11-21`, work branch `work/beta4-trial-ui-adoption`. Original renderer/checkpoints remain intact. Selected neutral focus/return policies were adapted from Trial; no Trial engine, preset, credentials, restrictions or exit screen were imported. Current full-version exit strategy is retained. Defaults change only where no preference is saved; explicit settings survive.
+
+Owner additionally selected numbered stream links; the visible-list numbers retain original addon identity and sorting. Repeated regular Beta4 report: an episode marked watched in Details remained in Continue Watching as New episode, then disappeared after full exit/reentry. Nocturne episode5 is the first known reproduction. A separate completion-display patch filters known-watched NextUp episode identities at initial/partial/final/enriched publications and cache-protected state branches; unfinished InProgress rewatches stay. This is a targeted source fix, not a claimed device pass or proof of the original root cause.
+
+Validation: Full Debug app/test compilation passed; 37 tests across five selected JUnit classes passed with zero failures/errors/skips. Original-renderer hash, personal customizations and whitespace checks passed. Local log: `../output/next-release-checks/beta4-adoption-tests.log`. No APK or new TV result is claimed by this source validation. Required TV comparison: new layout defaults/Original choice, grey/single headings, Down/Back/Right with slow-loading tabs, Up from top posters, entry at first heading/row, outlines/date clearance, playback versus ordinary catalog return, sidebar branding and numbered stream identity/order. Separately finish an episode and return without restarting: it must not remain as New episode; resume and legitimate unwatched next episodes must still work. Never clear app data or watched history to test this fix.
+
+Owner authorized implementation and handoff to Builds for Test APK first. No regular publication, protected merge, Trial change, package/signing migration or permanent Downloader update is authorized here.
+
+## Full-version adoption — owner Test sequence completed, 21 November 2026
+
+Signed Test107117 / build82, exact source `a40290708626526833d575e332e5e7de06580e0e`, run https://github.com/TheTooth29/epiSLATE/actions/runs/44888590572 succeeded. Artifact14701383339, SHA256 `99dffcece57d46414f2f6c2bdd95af755167d9391c3602a0a243cadb3eeb3c43`. Build/signature/package/icon/regression checks passed. Owner results are recorded in `../output/beta4-adoption-test-build-handoff.md` and summarized in `docs/releases/UNRELEASED.md`; later owner results supersede that handoff file’s older pending-test wording.
+
+Owner passed Two full rows, heading Down/Back/repeated Right, first-poster Down/Up, first-heading/top-row reentry, outlines/date clearance, details Back to collection heading and further Back to originating homepage tile, stream numbering with addon identity/badges/logos retained, playback/Home/SmartTube audio and paused reopen/resume, playback return to Continue Watching, sidebar removal/home branding, and Original selection/navigation followed by Two full rows. Fresh Test install signed in/synced and showed watched checkmarks. Crucially, a completed unwatched episode disappeared from Continue Watching without restart. No new pass is claimed for unreported slow-loading cases or previously saved switches; no regular-package in-place upgrade is claimed from this fresh Test install.
+
+Results recorded for review only. No merge, tag, regular release, push/build, Trial change or Downloader promotion was performed from this result handoff. Await the owner’s promotion decision.
+
+## Beta adoption queue — Trial detail Back restoration, 22 November 2026
+
+Tracking only; Beta implementation/build/merge/publication is not authorized by this entry. No existing entry for Trial commits 259c368/d6a0946 was found. This is a later refinement of the Test107117 adoption, not a request to reapply that completed batch.
+
+Behavior: returning from Details restores the selected catalog heading/tab, exact poster and scroll position across repeated visits. Fresh category entry must still start at the first heading/top row, with heading Down/Up/Back/Right navigation intact.
+
+Evidence reported by Builds: owner passed Trial17 (APK107118), exact source e3656c06f23d4cec90943b1ebe6eed4ac2d23b15, run https://github.com/TheTooth29/epiSLATE/actions/runs/45034410059. Checks included deep Details/Back under second/third Netflix headings, exact poster/row restoration, fresh first-heading/top-row entry and heading navigation. Focus changes include 259c368 and d6a0946. Accepted Trial batch merged into dedicated work/trial-release at 886ffb2061f690322695506af7b66b70e013e517; no regular dev merge. Final Trial107119 build/publication remains distinct from this tested-and-merged evidence.
+
+Beta applicability: shared collection navigation is applicable for review. Exclude Trial licensing, PIN, presets/catalog configuration and backend changes. Assess the minimal delta against the existing regular/Test policies before implementation. Required Beta validation after separately authorized implementation: repeated deep-poster Details/Back in multiple headings and tabs, exact heading/poster/scroll preservation; fresh category first-heading/top-row; Down/Up/Back/Right focus; ordinary Back to originating homepage collection; playback-return Continue Watching behavior; Original layout unchanged.
+
+
+## Test integration authorized — 24 November 2026
+
+Owner requested one Test build combining the remaining applicable Trial navigation correction and pending password-control fix. Implemented on work/test-trial-navigation-login, candidate107121. Updated layouts use the per-visit/resumed heading/poster/row restoration adapted from Trial259c368/d6a0946; Original renderer remains hash-identical. Password keyboard Done no longer submits; eye has explicit remote focus. Full CI and this port’s device validation remain pending. No regular merge/release or Trial distribution change.

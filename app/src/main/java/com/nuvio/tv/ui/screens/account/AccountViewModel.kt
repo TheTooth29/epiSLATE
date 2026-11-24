@@ -96,6 +96,15 @@ class AccountViewModel @Inject constructor(
     val usesEmailPasswordLogin: Boolean
         get() = serverConfiguration.isCustom && serverConfiguration.capabilities.emailPasswordAuth
 
+    val offersTestEmailPasswordLogin: Boolean
+        get() = com.nuvio.tv.core.auth.TestPasswordLoginPolicy.available(context.packageName, serverConfiguration.isCustom)
+
+    fun switchTestLoginMethod() {
+        if (!offersTestEmailPasswordLogin || _uiState.value.isLoading) return
+        clearQrLoginSession()
+        _uiState.update { it.copy(error = null) }
+    }
+
     init {
         observeAuthState()
         observeProfileNames()

@@ -1300,6 +1300,7 @@ private fun StreamsList(
                 val isPartySource = partySource?.matches(stream) == true
                 StreamCard(
                     stream = stream,
+                    streamNumber = index + 1,
                     showFileSizeBadges = showFileSizeBadges,
                     showAddonLogo = showAddonLogo,
                     badgePlacement = badgePlacement,
@@ -1343,12 +1344,16 @@ private fun StreamCard(
     onFocusChanged: ((Boolean) -> Unit)? = null,
     onUpKey: (() -> Unit)? = null,
     outlined: Boolean = false,
-    label: String? = null
+    label: String? = null,
+    streamNumber: Int? = null
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val unknownStreamLabel = stringResource(R.string.stream_unknown)
-    val streamName = remember(stream, unknownStreamLabel) { stream.getDisplayNameOrNull() ?: unknownStreamLabel }
+    val streamName = remember(stream, unknownStreamLabel, streamNumber) {
+        val original = stream.getDisplayNameOrNull() ?: unknownStreamLabel
+        streamNumber?.let { "$it | $original" } ?: original
+    }
     val streamDescription = remember(stream) { stream.getDisplayDescription() }
     val hasBadges = stream.badges.isNotEmpty() || (showFileSizeBadges && stream.behaviorHints?.videoSize != null) || reserveBadgeSpace
     val cardShape = RoundedCornerShape(NuvioTheme.radii.md)

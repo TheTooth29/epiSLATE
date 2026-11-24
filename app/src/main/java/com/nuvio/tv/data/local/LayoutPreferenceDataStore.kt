@@ -274,7 +274,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     val catalogTypeSuffixEnabled: Flow<Boolean> = profileFlow { prefs ->
-        prefs[catalogTypeSuffixEnabledKey] ?: true
+        prefs[catalogTypeSuffixEnabledKey] ?: false
     }
 
     val classicFocusGradientEnabled: Flow<Boolean> = profileFlow { prefs ->
@@ -282,7 +282,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     val focusedPosterBackdropExpandEnabled: Flow<Boolean> = profileFlow { prefs ->
-        prefs[focusedPosterBackdropExpandEnabledKey] ?: true
+        prefs[focusedPosterBackdropExpandEnabledKey] ?: false
     }
 
     val focusedPosterBackdropExpandDelaySeconds: Flow<Int> = profileFlow { prefs ->

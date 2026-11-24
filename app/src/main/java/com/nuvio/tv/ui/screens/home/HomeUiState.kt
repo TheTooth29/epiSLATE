@@ -38,7 +38,7 @@ data class HomeUiState(
     val modernHomePresentation: ModernHomePresentationState = ModernHomePresentationState(),
     val posterLabelsEnabled: Boolean = true,
     val catalogAddonNameEnabled: Boolean = true,
-    val catalogTypeSuffixEnabled: Boolean = true,
+    val catalogTypeSuffixEnabled: Boolean = false,
     val classicFocusGradientEnabled: Boolean = false,
     val focusedPosterBackdropExpandEnabled: Boolean = false,
     val focusedPosterBackdropExpandDelaySeconds: Int = 3,

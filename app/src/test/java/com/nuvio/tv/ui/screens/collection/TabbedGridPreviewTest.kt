@@ -4,10 +4,11 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class TabbedGridPreviewTest {
-    @Test fun `production and debug packages cannot enable preview`() {
-        assertTrue(TabbedGridPreviewStore.isTestPackage("com.nuvio.livetv.test"))
-        listOf("com.nuvio.livetv", "com.nuvio.livetv.debug", "com.nuvio.app", "other.test").forEach {
-            assertFalse(TabbedGridPreviewStore.isTestPackage(it))
+    @Test fun `full and Test packages support layouts without enabling other packages`() {
+        assertTrue(TabbedGridPreviewStore.supportsLayouts("com.nuvio.livetv.test"))
+        assertTrue(TabbedGridPreviewStore.supportsLayouts("com.nuvio.livetv"))
+        listOf("com.nuvio.livetv.debug", "com.nuvio.app", "other.test").forEach {
+            assertFalse(TabbedGridPreviewStore.supportsLayouts(it))
         }
     }
 
@@ -22,7 +23,8 @@ class TabbedGridPreviewTest {
 
     @Test fun `removed three-row preference safely returns to Original`() {
         assertEquals(TabbedGridPreview.ORIGINAL, TabbedGridPreview.fromStored("THREE_ROWS"))
-        assertEquals(TabbedGridPreview.ORIGINAL, TabbedGridPreview.fromStored(null))
+        assertEquals(TabbedGridPreview.TWO_ROWS, TabbedGridPreview.fromStored(null))
+        assertEquals(TabbedGridPreview.ORIGINAL, TabbedGridPreview.fromStored("ORIGINAL"))
         assertEquals(TabbedGridPreview.CENTERED, TabbedGridPreview.fromStored("CENTERED"))
         assertEquals(5, TabbedGridPreview.CENTERED.columns)
         assertFalse(TabbedGridPreview.entries.any { it.name == "THREE_ROWS" })

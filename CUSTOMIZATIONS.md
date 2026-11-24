@@ -14,9 +14,10 @@ The integration branch is `dev`. Upstream is `homelessbrian/NuvioPlusIPTV`, whic
 ## Keep these customizations
 
 - Full app launcher branding is epiSLATE; test builds append Test. Package IDs, signing and updater repository stay unchanged.
-- Root Modern homepage uses rowsOnlyHomepage: the approved collection headings, spacing and normal scrolling, no homepage hero media/metadata, blue-charcoal gradient, pinned epiSLATE wordmark and collection focus styling. Collection drill-down layouts retain original defaults. Leaving a homepage row resets its horizontal position.
+- Root Modern homepage uses rowsOnlyHomepage: the approved collection headings, spacing and normal scrolling, no homepage hero media/metadata, blue-charcoal gradient, pinned epiSLATE wordmark and collection focus styling. Owner-approved collection browsing: default to Two full rows when no layout choice is saved, keep the Original renderer available, and respect explicit saved choices. Updated layouts retain grey heading focus, single-source headings, first-heading/top-row entry, neutral poster outlines, date clearance, and scoped heading/poster navigation. Leaving a homepage row resets its horizontal position.
 
 - Modern home collection tiles with blank Hero Backdrop and Hero Video fields do not render hero media. Tile covers and focus GIFs remain. Explicit collection hero media is allowed.
+- Keep the full-version exit strategy. Trial activation, presets, restrictions, notices and Trial exit/contact UI are not part of the approved full-version adoption.
 - English top-row labels remain `CONTINUE WATCHING` and `UPCOMING`.
 - The in-app updater uses `TheTooth29/epiSLATE`, not the upstream repositories.
 - Build workflows load this repository's saved Nuvio backend and TMDB settings. Debug builds require the login backend settings, preventing another APK with missing QR configuration.

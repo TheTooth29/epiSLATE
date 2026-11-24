@@ -36,8 +36,8 @@ def main():
     new = apk_info(args.aapt, args.apksigner, args.candidate)
     checks = {
         "regular_app_identity": old["package"] == new["package"] == "com.nuvio.livetv",
-        "previous_is_beta_2": old["version_name"] == "1.0.0-beta.2" and old["version_code"] == 107105,
-        "candidate_is_beta_3": new["version_name"] == "1.0.0-beta.3" and new["version_code"] == 107106,
+        "previous_is_beta_3": old["version_name"] == "1.0.0-beta.3" and old["version_code"] == 107106,
+        "candidate_is_beta_4": new["version_name"] == "1.0.0-beta.4" and new["version_code"] == 107107,
         "higher_version_code": new["version_code"] > old["version_code"],
         "regular_app_label": new["label"] == "epiSLATE",
         "same_signing_certificates": new["signers"] == old["signers"],
@@ -46,7 +46,7 @@ def main():
     failed = [name for name, passed in checks.items() if not passed]
     if failed:
         raise SystemExit("APK upgrade checks failed: " + ", ".join(failed))
-    print("Beta 3 APK identity, version progression, and signing match Beta 2.")
+    print("Beta 4 APK identity, version progression, and signing match Beta 3.")
 
 
 if __name__ == "__main__":
